@@ -6,41 +6,40 @@ import { getSelectorsByUserAgent } from 'react-device-detect';
 function App() {
   const db = useWordDB();
   const [selectedWords, setSelectedWords] = useState([]);
-  const [selectedHints, setSelectedHints] = useState([]);
   const [board, setBoard] = useState([[]]);
+  const [placedWords, setPlacedWords] = useState([]);
 
-  // Use useEffect to run once when component mounts or when db changes
   useEffect(() => {
     if (!db) return;
     
     chooseWords();
-    console.log(selectedWords);
   }, [db]);
   
-  // Run this effect when selectedWords changes
   useEffect(() => {
     if (selectedWords.length > 0) {
-      const newBoard = createCrossword(selectedWords, 14);
-      if (newBoard) {
-        setBoard(newBoard);
+      const crosswordResult = createCrossword(selectedWords, 14);
+      if (crosswordResult) {
+        setBoard(crosswordResult.board);
+        setPlacedWords(crosswordResult.placedWords);
       }
     }
   }, [selectedWords]);
 
   const chooseWords = () => {
     if (!db) return;
-    let hnt = [];
-    let wrd = [];
-    for (let i = 0; i < getRandomIntInclusive(10, 20); i++) {
+
+    let results = [];
+    for (let i = 0; i < getRandomIntInclusive(12, 20); i++) {
       const randomLength = getRandomIntInclusive(4, 7);
       const words = db[randomLength];
-      const word = words[Math.floor(Math.random() * words.length)];
-      wrd.push(word.answer);
-      hnt.push(word.clue);
+      
+      const randomIndex = Math.floor(Math.random() * words.length);
+      const wordObj = words[randomIndex];
+      
+      results.push(wordObj);
     }
 
-    setSelectedWords(wrd);
-    setSelectedHints(hnt);
+    setSelectedWords(results);
   };
 
   const handleChangePuzzle = () => {
@@ -48,9 +47,11 @@ function App() {
   };
 
   return (
-    <>
-      <Board board={board} clues={selectedHints} onChangePuzzle={handleChangePuzzle} />
-    </>
+    <Board 
+      board={board} 
+      placedWords={placedWords} 
+      onChangePuzzle={handleChangePuzzle} 
+    />
   );
 }
 
@@ -59,54 +60,60 @@ function Landing(ingame) {
 
 }
 
-function Board({ board, onChangePuzzle, clues }) {
+function Board({ board, placedWords, onChangePuzzle }) {
   const [numberedGrid, setNumberedGrid] = useState([]);
+  
+  const acrossClues = placedWords
+    ? placedWords.filter(word => word.isHorizontal).sort((a, b) => a.clueNumber - b.clueNumber)
+    : [];
+    
+  const downClues = placedWords
+    ? placedWords.filter(word => !word.isHorizontal).sort((a, b) => a.clueNumber - b.clueNumber)
+    : [];
 
-  const isStartOfWord = (row, col) => {
-    if (board[row][col] === '-') return false;
-    
-    // Start of across word if: leftmost cell or left cell is black
-    const startsAcross = col === 0 || board[row][col-1] === '-';
-    
-    // Start of down word if: topmost cell or cell above is black
-    const startsDown = row === 0 || board[row-1][col] === '-';
-    
-    // Check if this cell starts either an across or down word
-    return startsAcross && board[row][col+1] !== undefined && board[row][col+1] !== '-' ||
-           startsDown && board[row+1] !== undefined && board[row+1][col] !== '-';
-  };
-
-  // Generate numbers for the crossword
   useEffect(() => {
-    const numbered = Array(board.length).fill().map(() => Array(board[0].length).fill(null));
-    let clueNumber = 1;
+    if (!board || board.length === 0 || !placedWords) return;
     
-    for (let row = 0; row < board.length; row++) {
-      for (let col = 0; col < board[row].length; col++) {
-        if (isStartOfWord(row, col)) {
-          numbered[row][col] = clueNumber++;
-        }
+    const numbered = Array(board.length).fill().map(() => Array(board[0].length).fill(null));
+    
+    for (const { row, col, clueNumber } of placedWords) {
+      if (clueNumber) {
+        numbered[row][col] = clueNumber;
       }
     }
     
     setNumberedGrid(numbered);
-  }, [board]);
+  }, [board, placedWords]);
 
-
-  // Inline CSS for the component
   const styles = {
     container: {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
+      fontFamily: 'Arial, sans-serif',
+      maxWidth: '800px',
+      margin: '0 auto'
     },
     title: {
       fontSize: '24px',
       fontWeight: 'bold',
       marginBottom: '20px'
     },
+    gameContainer: {
+      display: 'flex',
+      flexDirection: 'column',
+      width: '100%'
+    },
+    boardAndCluesContainer: {
+      display: 'flex',
+      flexDirection: 'row',
+      gap: '20px',
+      marginBottom: '24px',
+      flexWrap: 'wrap',
+      justifyContent: 'center'
+    },
     boardContainer: {
-      marginBottom: '24px'
+      flexShrink: 0
     },
     board: {
       display: 'grid',
@@ -133,11 +140,41 @@ function Board({ board, onChangePuzzle, clues }) {
     whiteCell: {
       backgroundColor: '#fff'
     },
-    clueNumber: {
+    cellNumber: {
       position: 'absolute',
       top: '2px',
       left: '4px',
       fontSize: '10px'
+    },
+    cluesContainer: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '20px',
+      flex: 1,
+      minWidth: '300px'
+    },
+    clueSection: {
+      marginBottom: '20px'
+    },
+    clueHeading: {
+      fontSize: '18px',
+      fontWeight: 'bold',
+      marginBottom: '10px',
+      borderBottom: '1px solid #ccc',
+      paddingBottom: '5px'
+    },
+    clueList: {
+      listStyleType: 'none',
+      padding: 0,
+      margin: 0
+    },
+    clueItem: {
+      marginBottom: '8px',
+      fontSize: '14px'
+    },
+    clueNumber: {
+      fontWeight: 'bold',
+      marginRight: '5px'
     },
     button: {
       padding: '10px 16px',
@@ -146,54 +183,82 @@ function Board({ board, onChangePuzzle, clues }) {
       border: 'none',
       borderRadius: '4px',
       fontSize: '16px',
-      cursor: 'pointer'
+      cursor: 'pointer',
+      alignSelf: 'center',
+      marginTop: '10px'
     }
   };
 
   return (
-    <div style={styles.container}>
+    <div className="crossword-container">
+      <h2 className="crossword-title">CROSSWARD</h2>
       
-      <div style={styles.boardContainer}>
-        <div style={styles.board}>
-          {board.map((row, rowIndex) => (
-            <div key={rowIndex} style={styles.row}>
-              {row.map((cell, colIndex) => (
-                <div 
-                  key={`${rowIndex}-${colIndex}`} 
-                  style={{
-                    ...styles.cell,
-                    ...(cell === '-' ? styles.blackCell : styles.whiteCell)
-                  }}
-                >
-                  {cell !== '-' && (
-                    <>
-                      {numberedGrid[rowIndex] && numberedGrid[rowIndex][colIndex] && (
-                        <span style={styles.clueNumber}>
-                          {numberedGrid[rowIndex][colIndex]}
-                        </span>
+      <div className="game-container">
+        <div className="board-and-clues-container">
+          <div className="board-container">
+            <div className="board" style={{ gridTemplateRows: `repeat(${board.length}, 1fr)` }}>
+              {board.map((row, rowIndex) => (
+                <div key={rowIndex} className="board-row">
+                  {row.map((cell, colIndex) => (
+                    <div 
+                      key={`${rowIndex}-${colIndex}`} 
+                      className={`cell ${cell === '-' ? 'cell-black' : 'cell-white'}`}
+                    >
+                      {cell !== '-' && (
+                        <>
+                          {numberedGrid[rowIndex] && numberedGrid[rowIndex][colIndex] && (
+                            <span className="cell-number">
+                              {numberedGrid[rowIndex][colIndex]}
+                            </span>
+                          )}
+                          <span>
+                            {cell}
+                          </span>
+                        </>
                       )}
-                      <span>
-                        {cell}
-                      </span>
-                    </>
-                  )}
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
-          ))}
+          </div>
+          
+          <div className="clues-container">
+            {/* Across Clues */}
+            <div className="clue-section">
+              <h3 className="clue-heading">Across</h3>
+              <ul className="clue-list">
+                {acrossClues.map((word, index) => (
+                  <li key={`across-${index}`} className="clue-item">
+                    <span className="clue-number">{word.clueNumber}.</span>
+                    {word.clue}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            
+            {/* Down Clues */}
+            <div className="clue-section">
+              <h3 className="clue-heading">Down</h3>
+              <ul className="clue-list">
+                {downClues.map((word, index) => (
+                  <li key={`down-${index}`} className="clue-item">
+                    <span className="clue-number">{word.clueNumber}.</span>
+                    {word.clue}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </div>
+        
+        <button 
+          className="crossword-button"
+          onClick={onChangePuzzle}
+        >
+          gen
+        </button>
       </div>
-
-      <div>
-        {clues.map(clue => (clue))}
-      </div>
-      
-      <button 
-        style={styles.button}
-        onClick={onChangePuzzle}
-      >
-        Change Puzzle
-      </button>
     </div>
   );
 }
@@ -210,7 +275,8 @@ function createCrossword(words, boardLength) {
   );
   const placedWords = [];
 
-  const isValidPlacement = (word, row, col, isHorizontal) => {
+  const isValidPlacement = (wordObj, row, col, isHorizontal) => {
+    const word = wordObj.answer;
     const len = word.length;
 
     if (
@@ -229,7 +295,6 @@ function createCrossword(words, boardLength) {
       if (char !== '-' && char !== word[i]) return false;
       if (char === word[i]) connectsToExisting = true;
 
-      // Disallow adjacent words
       const adjacents = isHorizontal
         ? [[r - 1, c], [r + 1, c]]
         : [[r, c - 1], [r, c + 1]];
@@ -244,7 +309,6 @@ function createCrossword(words, boardLength) {
       }
     }
 
-    // Prevent touching at start or end
     const before = isHorizontal ? [row, col - 1] : [row - 1, col];
     const after = isHorizontal ? [row, col + len] : [row + len, col];
 
@@ -256,13 +320,13 @@ function createCrossword(words, boardLength) {
       ) return false;
     }
 
-    // If this is not the first word, it must connect
     if (placedWords.length > 0 && !connectsToExisting) return false;
 
     return true;
   };
 
-  const placeWord = (word, row, col, isHorizontal) => {
+  const placeWord = (wordObj, row, col, isHorizontal) => {
+    const word = wordObj.answer;
     const positions = [];
     for (let i = 0; i < word.length; i++) {
       const r = isHorizontal ? row : row + i;
@@ -270,7 +334,17 @@ function createCrossword(words, boardLength) {
       if (board[r][c] === '-') board[r][c] = word[i];
       positions.push([r, c]);
     }
-    placedWords.push({ word, row, col, isHorizontal });
+    
+    // Store the word object along with position info
+    placedWords.push({ 
+      word: wordObj.answer, 
+      clue: wordObj.clue,
+      row, 
+      col, 
+      isHorizontal,
+      clueNumber: null // Will be filled in later
+    });
+    
     return positions;
   };
 
@@ -294,14 +368,14 @@ function createCrossword(words, boardLength) {
   const tryPlaceWords = (index) => {
     if (index === words.length) return true;
 
-    const word = words[index];
+    const wordObj = words[index];
     let placed = false;
 
     for (let r = 0; r < boardLength; r++) {
       for (let c = 0; c < boardLength; c++) {
         for (const isHorizontal of [true, false]) {
-          if (isValidPlacement(word, r, c, isHorizontal)) {
-            const positions = placeWord(word, r, c, isHorizontal);
+          if (isValidPlacement(wordObj, r, c, isHorizontal)) {
+            const positions = placeWord(wordObj, r, c, isHorizontal);
             if (tryPlaceWords(index + 1)) return true;
             removeWord(positions);
             placed = true;
@@ -315,18 +389,49 @@ function createCrossword(words, boardLength) {
   };
 
   // Sort longest first
-  words.sort((a, b) => b.length - a.length);
+  words.sort((a, b) => b.answer.length - a.answer.length);
 
   // Place first word at center horizontally
   const startRow = Math.floor(boardLength / 2);
-  const startCol = Math.floor((boardLength - words[0].length) / 2);
+  const startCol = Math.floor((boardLength - words[0].answer.length) / 2);
 
   if (!isValidPlacement(words[0], startRow, startCol, true)) return null;
   placeWord(words[0], startRow, startCol, true);
 
   if (!tryPlaceWords(1)) return null;
+  
+  // Number the crossword clues
+  const cellNumbers = Array(boardLength).fill().map(() => Array(boardLength).fill(null));
+  let clueNumber = 1;
+  
+  // First pass: assign numbers to cells
+  for (let row = 0; row < boardLength; row++) {
+    for (let col = 0; col < boardLength; col++) {
+      if (board[row][col] === '-') continue;
+      
+      // Check if this cell starts a word
+      const startsAcross = (col === 0 || board[row][col-1] === '-') && 
+                         col + 1 < boardLength && board[row][col+1] !== '-';
+      
+      const startsDown = (row === 0 || board[row-1][col] === '-') && 
+                       row + 1 < boardLength && board[row+1][col] !== '-';
+      
+      if (startsAcross || startsDown) {
+        cellNumbers[row][col] = clueNumber++;
+      }
+    }
+  }
+  
+  // Second pass: update placed words with their clue numbers
+  for (const wordInfo of placedWords) {
+    const { row, col } = wordInfo;
+    wordInfo.clueNumber = cellNumbers[row][col];
+  }
 
-  return board;
+  return {
+    board,
+    placedWords
+  };
 }
 
 export default App;
