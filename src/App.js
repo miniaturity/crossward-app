@@ -18,7 +18,14 @@ function Landing(ingame) {
 }
 
 function Board() {
-  
+  const words = [];
+
+}
+
+function chooseWords(count) {
+
+
+
 }
 
 function createCrossword(words, boardLength) {
