@@ -1,26 +1,38 @@
 import './App.css';
 import { useState, useEffect } from 'react';
-import * as worddb from './sampledWordDB.json'
+import { useWordDB } from './WordDB.js'
 
-function useWordDB() {
-  const [wordDB, setWordDB] = useState(null);
+function WordChooser() {
+  const wordDB = useWordDB();
+  const [selectedWords, setSelectedWords] = useState([]);
 
-  useEffect(() => {
-    fetch('/worddb.json') // Place worddb.json in /public folder
-      .then((res) => res.json())
-      .then((data) => setWordDB(data))
-      .catch((err) => console.error('Failed to load word DB:', err));
-  }, []);
+  const chooseWords = () => {
+    if (!wordDB) return;
 
-  const getRandomWordOfLength = (length) => {
-    if (!wordDB) return null;
-    const entries = wordDB[length];
-    if (!entries || entries.length === 0) return null;
-    const index = Math.floor(Math.random() * entries.length);
-    return entries[index];
+    let results = [];
+    for (let i = 0; i < 5; i++) {
+      const lengths = Object.keys(wordDB);
+      const randomLength = lengths[Math.floor(Math.random() * lengths.length)];
+      const words = wordDB[randomLength];
+      const word = words[Math.floor(Math.random() * words.length)];
+      results.push(word);
+    }
+
+    setSelectedWords(results);
   };
 
-  return { getRandomWordOfLength };
+  return (
+    <div>
+      <button onClick={chooseWords}>Choose 5 Words</button>
+      <ul>
+        {selectedWords.map((word, idx) => (
+          <li key={idx}>
+            <strong>{word.answer}</strong>: {word.clue}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function App() {
@@ -28,7 +40,7 @@ function App() {
 
   return (
     <>
-
+      <WordChooser />
     </>
   )
 }
@@ -40,15 +52,6 @@ function Landing(ingame) {
 
 function Board() {
   const words = [];
-
-}
-
-function chooseWords(count) {
-  for (let i = 0; i < count; i++) {
-    const LENGTH = getRandomIntInclusive(5, 8).toString();
-
-  }
-
 
 }
 
