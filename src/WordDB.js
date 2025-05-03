@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 
-
-export default function useWordDB() {
+function useWordDB() {
   const [wordDB, setWordDB] = useState(null);
 
   useEffect(() => {
-    fetch('/worddb.json')
+    fetch('./sampledWordDB.json')
       .then((res) => res.json())
       .then((data) => setWordDB(data))
       .catch((err) => console.error('Failed to load word DB:', err));
@@ -13,3 +12,5 @@ export default function useWordDB() {
 
   return wordDB;
 }
+
+export default useWordDB;

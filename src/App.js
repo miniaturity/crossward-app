@@ -1,48 +1,57 @@
 import './App.css';
 import { useState, useEffect } from 'react';
-import { useWordDB } from './WordDB.js'
+import useWordDB from './WordDB';
+import { getSelectorsByUserAgent } from 'react-device-detect';
 
-function WordChooser() {
-  const wordDB = useWordDB();
+function App() {
+  const db = useWordDB();
   const [selectedWords, setSelectedWords] = useState([]);
+  const [selectedHints, setSelectedHints] = useState([]);
+  const [board, setBoard] = useState([[]]);
+
+  // Use useEffect to run once when component mounts or when db changes
+  useEffect(() => {
+    if (!db) return;
+    
+    chooseWords();
+    console.log(selectedWords);
+  }, [db]);
+  
+  // Run this effect when selectedWords changes
+  useEffect(() => {
+    if (selectedWords.length > 0) {
+      const newBoard = createCrossword(selectedWords, 14);
+      if (newBoard) {
+        setBoard(newBoard);
+      }
+    }
+  }, [selectedWords]);
 
   const chooseWords = () => {
-    if (!wordDB) return;
-
-    let results = [];
-    for (let i = 0; i < 5; i++) {
-      const lengths = Object.keys(wordDB);
-      const randomLength = lengths[Math.floor(Math.random() * lengths.length)];
-      const words = wordDB[randomLength];
+    if (!db) return;
+    let hnt = [];
+    let wrd = [];
+    for (let i = 0; i < getRandomIntInclusive(10, 20); i++) {
+      const randomLength = getRandomIntInclusive(4, 7);
+      const words = db[randomLength];
       const word = words[Math.floor(Math.random() * words.length)];
-      results.push(word);
+      wrd.push(word.answer);
+      hnt.push(word.clue);
     }
 
-    setSelectedWords(results);
+    setSelectedWords(wrd);
+    setSelectedHints(hnt);
+  };
+
+  const handleChangePuzzle = () => {
+    chooseWords();
   };
 
   return (
-    <div>
-      <button onClick={chooseWords}>Choose 5 Words</button>
-      <ul>
-        {selectedWords.map((word, idx) => (
-          <li key={idx}>
-            <strong>{word.answer}</strong>: {word.clue}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function App() {
-  const [inGame, setInGame] = useState(false);
-
-  return (
     <>
-      <WordChooser />
+      <Board board={board} clues={selectedHints} onChangePuzzle={handleChangePuzzle} />
     </>
-  )
+  );
 }
 
 
@@ -50,11 +59,145 @@ function Landing(ingame) {
 
 }
 
-function Board() {
-  const words = [];
+function Board({ board, onChangePuzzle, clues }) {
+  const [numberedGrid, setNumberedGrid] = useState([]);
 
+  const isStartOfWord = (row, col) => {
+    if (board[row][col] === '-') return false;
+    
+    // Start of across word if: leftmost cell or left cell is black
+    const startsAcross = col === 0 || board[row][col-1] === '-';
+    
+    // Start of down word if: topmost cell or cell above is black
+    const startsDown = row === 0 || board[row-1][col] === '-';
+    
+    // Check if this cell starts either an across or down word
+    return startsAcross && board[row][col+1] !== undefined && board[row][col+1] !== '-' ||
+           startsDown && board[row+1] !== undefined && board[row+1][col] !== '-';
+  };
+
+  // Generate numbers for the crossword
+  useEffect(() => {
+    const numbered = Array(board.length).fill().map(() => Array(board[0].length).fill(null));
+    let clueNumber = 1;
+    
+    for (let row = 0; row < board.length; row++) {
+      for (let col = 0; col < board[row].length; col++) {
+        if (isStartOfWord(row, col)) {
+          numbered[row][col] = clueNumber++;
+        }
+      }
+    }
+    
+    setNumberedGrid(numbered);
+  }, [board]);
+
+
+  // Inline CSS for the component
+  const styles = {
+    container: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+    },
+    title: {
+      fontSize: '24px',
+      fontWeight: 'bold',
+      marginBottom: '20px'
+    },
+    boardContainer: {
+      marginBottom: '24px'
+    },
+    board: {
+      display: 'grid',
+      gridTemplateRows: `repeat(${board.length}, 1fr)`,
+      border: '2px solid #333'
+    },
+    row: {
+      display: 'flex'
+    },
+    cell: {
+      position: 'relative',
+      width: '48px',
+      height: '48px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      border: '1px solid #aaa',
+      fontWeight: 'bold',
+      fontSize: '18px'
+    },
+    blackCell: {
+      backgroundColor: '#000'
+    },
+    whiteCell: {
+      backgroundColor: '#fff'
+    },
+    clueNumber: {
+      position: 'absolute',
+      top: '2px',
+      left: '4px',
+      fontSize: '10px'
+    },
+    button: {
+      padding: '10px 16px',
+      backgroundColor: '#4a6ea9',
+      color: 'white',
+      border: 'none',
+      borderRadius: '4px',
+      fontSize: '16px',
+      cursor: 'pointer'
+    }
+  };
+
+  return (
+    <div style={styles.container}>
+      
+      <div style={styles.boardContainer}>
+        <div style={styles.board}>
+          {board.map((row, rowIndex) => (
+            <div key={rowIndex} style={styles.row}>
+              {row.map((cell, colIndex) => (
+                <div 
+                  key={`${rowIndex}-${colIndex}`} 
+                  style={{
+                    ...styles.cell,
+                    ...(cell === '-' ? styles.blackCell : styles.whiteCell)
+                  }}
+                >
+                  {cell !== '-' && (
+                    <>
+                      {numberedGrid[rowIndex] && numberedGrid[rowIndex][colIndex] && (
+                        <span style={styles.clueNumber}>
+                          {numberedGrid[rowIndex][colIndex]}
+                        </span>
+                      )}
+                      <span>
+                        {cell}
+                      </span>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        {clues.map(clue => (clue))}
+      </div>
+      
+      <button 
+        style={styles.button}
+        onClick={onChangePuzzle}
+      >
+        Change Puzzle
+      </button>
+    </div>
+  );
 }
-
+  
 function getRandomIntInclusive(min, max) {
   min = Math.ceil(min);
   max = Math.floor(max);
