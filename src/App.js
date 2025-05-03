@@ -1,7 +1,27 @@
 import './App.css';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import * as worddb from './sampledWordDB.json'
 
+function useWordDB() {
+  const [wordDB, setWordDB] = useState(null);
 
+  useEffect(() => {
+    fetch('/worddb.json') // Place worddb.json in /public folder
+      .then((res) => res.json())
+      .then((data) => setWordDB(data))
+      .catch((err) => console.error('Failed to load word DB:', err));
+  }, []);
+
+  const getRandomWordOfLength = (length) => {
+    if (!wordDB) return null;
+    const entries = wordDB[length];
+    if (!entries || entries.length === 0) return null;
+    const index = Math.floor(Math.random() * entries.length);
+    return entries[index];
+  };
+
+  return { getRandomWordOfLength };
+}
 
 function App() {
   const [inGame, setInGame] = useState(false);
@@ -24,9 +44,18 @@ function Board() {
 }
 
 function chooseWords(count) {
+  for (let i = 0; i < count; i++) {
+    const LENGTH = getRandomIntInclusive(5, 8).toString();
+
+  }
 
 
+}
 
+function getRandomIntInclusive(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
 function createCrossword(words, boardLength) {
