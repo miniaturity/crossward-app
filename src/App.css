@@ -1,0 +1,10 @@
+.left-p {
+  width: 15vw;
+  
+}
+
+
+@font-face {
+  font-family: pixeled;
+  src: url(../public/assets/fonts/Pixeled.ttf);
+}
