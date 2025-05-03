@@ -1,9 +1,7 @@
 import './App.css';
 import { useState } from 'react';
-import * as worddb from './'
 
-const fs = require('fs');
-const readline = require('readline');
+
 
 function App() {
   const [inGame, setInGame] = useState(false);
@@ -154,40 +152,6 @@ function createCrossword(words, boardLength) {
   if (!tryPlaceWords(1)) return null;
 
   return board;
-}
-
-async function getWordsWithLetters(filePath, requiredLetters = []) {
-  const fileStream = fs.createReadStream(filePath);
-
-  const rl = readline.createInterface({
-    input: fileStream,
-    crlfDelay: Infinity
-  });
-
-  const matchingWords = [];
-
-  for await (const line of rl) {
-    try {
-      const entry = JSON.parse(line);
-      const answer = entry.answer.toUpperCase();
-
-      if (requiredLetters.every(letter => answer.includes(letter.toUpperCase()))) {
-        matchingWords.push(entry);
-      }
-    } catch (err) {
-      console.error('Skipping invalid line:', err.message);
-    }
-  }
-
-  if (matchingWords.length === 0) {
-    console.log("No words found.");
-    return null;
-  }
-
-  // Pick a random matching word
-  const randomWord = matchingWords[Math.floor(Math.random() * matchingWords.length)];
-  console.log("Random match:", randomWord);
-  return randomWord;
 }
 
 export default App;
