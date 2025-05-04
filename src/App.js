@@ -1,7 +1,6 @@
 import './App.css';
 import { useState, useEffect } from 'react';
 import useWordDB from './WordDB';
-import { getSelectorsByUserAgent } from 'react-device-detect';
 
 function App() {
   const db = useWordDB();
@@ -55,10 +54,11 @@ function App() {
   );
 }
 
-
-function Landing(ingame) {
+function MainMenu({ isInMenu }) {
+  if (isInMenu) return null;
 
 }
+
 
 function Board({ board, placedWords, onChangePuzzle }) {
   const [numberedGrid, setNumberedGrid] = useState([]);
@@ -224,7 +224,6 @@ function Board({ board, placedWords, onChangePuzzle }) {
           </div>
           
           <div className="clues-container">
-            {/* Across Clues */}
             <div className="clue-section">
               <h3 className="clue-heading">Across</h3>
               <ul className="clue-list">
@@ -237,7 +236,6 @@ function Board({ board, placedWords, onChangePuzzle }) {
               </ul>
             </div>
             
-            {/* Down Clues */}
             <div className="clue-section">
               <h3 className="clue-heading">Down</h3>
               <ul className="clue-list">
@@ -384,14 +382,11 @@ function createCrossword(words, boardLength) {
       }
     }
 
-    // Skip unplaceable word
     return tryPlaceWords(index + 1);
   };
 
-  // Sort longest first
   words.sort((a, b) => b.answer.length - a.answer.length);
 
-  // Place first word at center horizontally
   const startRow = Math.floor(boardLength / 2);
   const startCol = Math.floor((boardLength - words[0].answer.length) / 2);
 
@@ -400,21 +395,18 @@ function createCrossword(words, boardLength) {
 
   if (!tryPlaceWords(1)) return null;
   
-  // Number the crossword clues
   const cellNumbers = Array(boardLength).fill().map(() => Array(boardLength).fill(null));
   let clueNumber = 1;
   
-  // First pass: assign numbers to cells
   for (let row = 0; row < boardLength; row++) {
     for (let col = 0; col < boardLength; col++) {
       if (board[row][col] === '-') continue;
       
-      // Check if this cell starts a word
       const startsAcross = (col === 0 || board[row][col-1] === '-') && 
-                         col + 1 < boardLength && board[row][col+1] !== '-';
+        col + 1 < boardLength && board[row][col+1] !== '-';
       
       const startsDown = (row === 0 || board[row-1][col] === '-') && 
-                       row + 1 < boardLength && board[row+1][col] !== '-';
+       row + 1 < boardLength && board[row+1][col] !== '-';
       
       if (startsAcross || startsDown) {
         cellNumbers[row][col] = clueNumber++;
@@ -422,7 +414,6 @@ function createCrossword(words, boardLength) {
     }
   }
   
-  // Second pass: update placed words with their clue numbers
   for (const wordInfo of placedWords) {
     const { row, col } = wordInfo;
     wordInfo.clueNumber = cellNumbers[row][col];
