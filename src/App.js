@@ -193,7 +193,7 @@ function LeftMenu({ onNewGame }) {
     }, 200); 
     
     return () => clearInterval(interval);
-  }, [introComplete]);
+  }, []);
 
   const menuButtons = [
     { name: "New Game", action: onNewGame },
