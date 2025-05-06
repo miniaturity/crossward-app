@@ -1,5 +1,43 @@
 body {
-  background-image: url(../public/assets/bg.gif);
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.rainbow-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.rainbow-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200%; 
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    #ff0000, 
+    #ff8000,
+    #ffff00, 
+    #00ff00, 
+    #00ffff, 
+    #0000ff, 
+    #8000ff, 
+    #ff0000  
+  );
+  animation: scroll-left 60s linear infinite;
+  z-index: -99;
+}
+
+@keyframes scroll-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%); /* Move left by half its width */
+  }
 }
 
 .page {
@@ -73,6 +111,7 @@ body {
   color: white;
   font-size: 18px;
   font-weight: bold;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
 }
 
 .section-content {
@@ -86,13 +125,14 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  font-size: 2.5rem;
   font-weight: bold;
   background-color: #6e6e6e;
   color: #ffffff;
   flex-grow: 1;
   width: 100vw;
   z-index: -1;
+  font-family: small-merchant;
 }
 
 .mid {
@@ -149,6 +189,8 @@ body {
   font-size: 18px;
   cursor: pointer;
   box-sizing: border-box;
+  font-family: small-merchant;
+  box-shadow: rgba(49, 49, 49, 0.7) 15px 15px
 }
 
 .intro-overlay {
@@ -171,7 +213,27 @@ body {
   color: #000000;
   font-size: 4rem;
   z-index: 2;
+  animation: title-shake 0.5s steps(2) infinite;
 }
+
+@keyframes title-shake {
+  0% {
+    transform: translate(2px, 1px);
+  }
+  25% {
+    transform: translate(-3px, -2px);
+  }
+  50% {
+    transform: translate(1px, -1px);
+  }
+  75% {
+    transform: translate(-1px, 2px);
+  }
+  100% {
+    transform: translate(2px, 1px);
+  }
+}
+
 
 .cell-black {
   background-color: #000;
@@ -217,12 +279,16 @@ body {
 
 .selected-cell {
   background-color: #ffda5e !important;
-  z-index: 2;
+  animation: float 3s ease-in-out infinite;
+  box-shadow: rgba(0, 0, 0, 0.3) 0px 19px 38px, rgba(0, 0, 0, 0.22) 0px 15px 12px;
 }
 
 .part-of-word {
   background-color: #fff3c7;
+  animation: float 3s ease-in-out infinite;
 }
+
+
 
 .button-container {
   display: flex;
@@ -233,12 +299,14 @@ body {
 
 .crossword-button {
   padding: 10px 16px;
-  background-color: #4a6ea9;
+  background-color: #4aa94a;
   color: white;
   border: none;
   font-size: 16px;
   cursor: pointer;
   transition: background-color 0.2s ease;
+  font-family: small-merchant;
+  font-size: 2rem;
 }
 
 .crossword-button:hover {
@@ -357,4 +425,46 @@ body {
 @font-face {
   font-family: merchant;
   src: url(../public/assets/fonts/merchant-copy.doublesize.ttf) format('truetype');
+}
+
+@font-face {
+  font-family: small-merchant;
+  src: url(../public/assets/fonts/merchant-copy.regular.ttf) format('truetype');
+}
+
+@keyframes float {
+  50% {
+      transform: translateY(-4px);
+  }
+
+  100% {
+      transform: translateY(0);
+  }
+}
+
+@keyframes scroll-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%); /* Move left by half its width */
+  }
+}
+
+@keyframes shake-subtle {
+  0% {
+    transform: translate(calc(-50% + 4px), calc(-50% + 3px));
+  }
+  25% {
+    transform: translate(calc(-50% - 3px), calc(-50% - 2px));
+  }
+  50% {
+    transform: translate(calc(-50% + 2px), calc(-50% - 4px));
+  }
+  75% {
+    transform: translate(calc(-50% - 4px), calc(-50% + 3px));
+  }
+  100% {
+    transform: translate(calc(-50% + 4px), calc(-50% + 3px));
+  }
 }

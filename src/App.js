@@ -11,10 +11,13 @@ function App() {
   const [selectedCell, setSelectedCell] = useState([]);
   const [selectedDirection, setSelectedDirection] = useState('across');
   const [currentClue, setCurrentClue] = useState('');
+  const [currentWord, setCurrentWord] = useState('');
   
   const [userBoard, setUserBoard] = useState([]);
   const [incorrectCells, setIncorrectCells] = useState([]);
+  const [inGame, setInGame] = useState(false);
 
+  const [points, setPoints] = useState(0);
 
   useEffect(() => {
     if (!db) return;
@@ -45,11 +48,12 @@ function App() {
     if (word) {
       const directionSymbol = word.isHorizontal ? 'A' : 'D';
       setCurrentClue(`${word.clueNumber}${directionSymbol}. ${word.clue}`);
+      setCurrentWord(word.word);
     }
   }, [selectedCell, selectedDirection, placedWords]);
 
   const newGame = () => {
-
+    setInGame(true);
   }
 
   const chooseWords = () => {
@@ -90,6 +94,55 @@ function App() {
     }
     
     setIncorrectCells(newIncorrectCells);
+  };
+
+  const handleCheckWord = () => {
+    if (selectedCell.length === 0) return;
+
+    const [row, col] = selectedCell;
+    const currentWord = findWordAtPosition(row, col, selectedDirection);
+    
+    if (!currentWord) return;
+    
+    const newIncorrectCells = [...incorrectCells];
+    let allCellsCorrect = true;
+    
+    // Check each letter of the current word
+    for (let i = 0; i < currentWord.word.length; i++) {
+      const letterRow = currentWord.isHorizontal ? currentWord.row : currentWord.row + i;
+      const letterCol = currentWord.isHorizontal ? currentWord.col + i : currentWord.col;
+      
+      // If the cell is empty, we don't mark it as incorrect
+      if (!userBoard[letterRow][letterCol]) {
+        allCellsCorrect = false;
+        continue;
+      }
+      
+      // Check if the user input matches the solution
+      if (userBoard[letterRow][letterCol] !== board[letterRow][letterCol]) {
+        allCellsCorrect = false;
+        
+        // Add to incorrect cells if not already there
+        if (!incorrectCells.some(([r, c]) => r === letterRow && c === letterCol)) {
+          newIncorrectCells.push([letterRow, letterCol]);
+        }
+      } else {
+        // Remove from incorrect cells if it was previously marked wrong but is now correct
+        const cellIndex = newIncorrectCells.findIndex(([r, c]) => r === letterRow && c === letterCol);
+        if (cellIndex !== -1) {
+          newIncorrectCells.splice(cellIndex, 1);
+        }
+      }
+    }
+    
+    setIncorrectCells(newIncorrectCells);
+    
+    // Award points if the entire word is correct
+    if (allCellsCorrect && currentWord) {
+      // We could check if this word has already been rewarded points before
+      // For now, just award points based on word length
+      setPoints(prev => prev + currentWord.word.length);
+    }
   };
   
   const handleSolvePuzzle = () => {
@@ -140,15 +193,18 @@ function App() {
   return (
     <div className="page">
       <div className="left">
-        <LeftMenu onNewGame={handleChangePuzzle} />
+        <LeftMenu onNewGame={newGame} />
       </div>
       <div className="top-clue">
         {currentClue}
       </div>
-      <div className="mid">
-          <div className="intro-overlay">
+      <div className="mid rainbow-container">
+        <div className="rainbow-background"></div>
+        { inGame === false ?
+          (<div className="intro-overlay">
             <h1 className="game-title">CROSSWARD</h1>
-          </div>
+          </div>) : null
+        }
 
           <Board 
             board={board} 
@@ -165,8 +221,14 @@ function App() {
             incorrectCells={incorrectCells}
             setIncorrectCells={setIncorrectCells}
             onCheckPuzzle={handleCheckPuzzle}
+            onCheckWord={handleCheckWord}
             onSolvePuzzle={handleSolvePuzzle}
+            inGame={inGame}
           />
+
+          <div className="points">
+            {points}
+          </div>
       </div>
       <div className="right">
         <RightMenu />
@@ -224,13 +286,11 @@ function RightMenu() {
       <div className="menu-section">
         <h2 className="section-title">ITEMS</h2>
         <div className="section-content">
-          {/* Items will go here */}
         </div>
       </div>
       <div className="menu-section">
         <h2 className="section-title">MODIFIERS</h2>
         <div className="section-content">
-          {/* Modifiers will go here */}
         </div>
       </div>
     </div>
@@ -252,7 +312,9 @@ function Board({
   incorrectCells,
   setIncorrectCells,
   onCheckPuzzle,
-  onSolvePuzzle
+  onCheckWord,
+  onSolvePuzzle,
+  inGame
 }) {
   const [numberedGrid, setNumberedGrid] = useState([]);
   const boardRef = useRef(null);
@@ -400,7 +462,7 @@ function Board({
     
     if (selectedCell.length > 0 && selectedCell[0] === row && selectedCell[1] === col) {
       setSelectedDirection(selectedDirection === 'across' ? 'down' : 'across');
-    } else if (selectedCell == "") {
+    } else {
       setSelectedCell([row, col]);
     }
   };
@@ -408,6 +470,15 @@ function Board({
   return (
     <div className="crossword-container">
       <div className="game-container">
+        <div className="button-container" style={{ marginBottom: '10px' }}>
+          <button 
+            className="crossword-button"
+            onClick={onCheckWord}
+            disabled={selectedCell.length === 0}
+          >
+            Check Word
+          </button>
+        </div>
         <div ref={boardRef} className="board-container">
           <div className="board" style={{ gridTemplateRows: `repeat(${board.length}, 1fr)` }}>
             {board.map((row, rowIndex) => (
