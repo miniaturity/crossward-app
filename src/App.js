@@ -15,11 +15,11 @@ function App() {
   const [userBoard, setUserBoard] = useState([]);
   const [incorrectCells, setIncorrectCells] = useState([]);
 
+
   useEffect(() => {
     if (!db) return;
-    
     chooseWords();
-  }, [db]);
+    }, [db]);
   
   useEffect(() => {
     if (selectedWords.length > 0) {
@@ -47,6 +47,10 @@ function App() {
       setCurrentClue(`${word.clueNumber}${directionSymbol}. ${word.clue}`);
     }
   }, [selectedCell, selectedDirection, placedWords]);
+
+  const newGame = () => {
+
+  }
 
   const chooseWords = () => {
     if (!db) return;
@@ -142,35 +146,92 @@ function App() {
         {currentClue}
       </div>
       <div className="mid">
-        <Board 
-          board={board} 
-          userBoard={userBoard}
-          setUserBoard={setUserBoard}
-          placedWords={placedWords} 
-          onChangePuzzle={handleChangePuzzle}
-          selectedCell={selectedCell}
-          setSelectedCell={setSelectedCell}
-          selectedDirection={selectedDirection}
-          setSelectedDirection={setSelectedDirection}
-          findWordAtPosition={findWordAtPosition}
-          findNextWord={findNextWord}
-          incorrectCells={incorrectCells}
-          setIncorrectCells={setIncorrectCells}
-          onCheckPuzzle={handleCheckPuzzle}
-          onSolvePuzzle={handleSolvePuzzle}
-        />
+          <div className="intro-overlay">
+            <h1 className="game-title">CROSSWARD</h1>
+          </div>
+
+          <Board 
+            board={board} 
+            userBoard={userBoard}
+            setUserBoard={setUserBoard}
+            placedWords={placedWords} 
+            onChangePuzzle={handleChangePuzzle}
+            selectedCell={selectedCell}
+            setSelectedCell={setSelectedCell}
+            selectedDirection={selectedDirection}
+            setSelectedDirection={setSelectedDirection}
+            findWordAtPosition={findWordAtPosition}
+            findNextWord={findNextWord}
+            incorrectCells={incorrectCells}
+            setIncorrectCells={setIncorrectCells}
+            onCheckPuzzle={handleCheckPuzzle}
+            onSolvePuzzle={handleSolvePuzzle}
+          />
+      </div>
+      <div className="right">
+        <RightMenu />
       </div>
     </div>
   );
 }
 
 function LeftMenu({ onNewGame }) {
+  const [visibleButtons, setVisibleButtons] = useState(0);
+  
+  useEffect(() => {
+    
+    let buttonCount = 0;
+    const menuButtons = ["New Game", "Settings", "Credits"];
+    
+    const interval = setInterval(() => {
+      buttonCount++;
+      setVisibleButtons(buttonCount);
+      
+      if (buttonCount >= menuButtons.length) {
+        clearInterval(interval);
+      }
+    }, 200); 
+    
+    return () => clearInterval(interval);
+  }, [introComplete]);
+
+  const menuButtons = [
+    { name: "New Game", action: onNewGame },
+    { name: "Settings", action: () => {} },
+    { name: "Credits", action: () => {} }
+  ];
+  
   return (
     <div className="left-menu">
       <div className="menu-buttons">
-        <button className="menu-button" onClick={onNewGame}>New Game</button>
-        <button className="menu-button">Settings</button>
-        <button className="menu-button">Credits</button>
+        {menuButtons.map((button, index) => (
+          <button 
+            key={button.name}
+            className={`menu-button ${index < visibleButtons ? 'visible' : ''}`} 
+            onClick={button.action}
+          >
+            {button.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RightMenu() {
+  return (
+    <div className="right-menu">
+      <div className="menu-section">
+        <h2 className="section-title">ITEMS</h2>
+        <div className="section-content">
+          {/* Items will go here */}
+        </div>
+      </div>
+      <div className="menu-section">
+        <h2 className="section-title">MODIFIERS</h2>
+        <div className="section-content">
+          {/* Modifiers will go here */}
+        </div>
       </div>
     </div>
   );
@@ -234,7 +295,6 @@ function Board({
       // Handle backspace
       else if (e.key === 'Backspace') {
         if (userBoard[row][col]) {
-          // Delete current cell and stay in place
           const newUserBoard = [...userBoard];
           newUserBoard[row][col] = '';
           setUserBoard(newUserBoard);
@@ -402,7 +462,7 @@ function Board({
           </div>
         </div>
         
-        <div className="button-container">
+        {/* <div className="button-container">
           <button 
             className="crossword-button"
             onClick={onCheckPuzzle}
@@ -421,7 +481,7 @@ function Board({
           >
             New Puzzle
           </button>
-        </div>
+        </div> */}
       </div>
     </div>
   );
