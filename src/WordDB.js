@@ -4,7 +4,7 @@ function useWordDB() {
   const [wordDB, setWordDB] = useState(null);
 
   useEffect(() => {
-    fetch('./sampledWordDB.json')
+    fetch('./wordDB.json')
       .then((res) => res.json())
       .then((data) => setWordDB(data))
       .catch((err) => console.error('Failed to load word DB:', err));

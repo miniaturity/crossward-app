@@ -1,5 +1,5 @@
 import './App.css';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import useWordDB from './WordDB';
 
 function App() {
@@ -7,6 +7,13 @@ function App() {
   const [selectedWords, setSelectedWords] = useState([]);
   const [board, setBoard] = useState([[]]);
   const [placedWords, setPlacedWords] = useState([]);
+  
+  const [selectedCell, setSelectedCell] = useState([]);
+  const [selectedDirection, setSelectedDirection] = useState('across');
+  const [currentClue, setCurrentClue] = useState('');
+  
+  const [userBoard, setUserBoard] = useState([]);
+  const [incorrectCells, setIncorrectCells] = useState([]);
 
   useEffect(() => {
     if (!db) return;
@@ -20,9 +27,26 @@ function App() {
       if (crosswordResult) {
         setBoard(crosswordResult.board);
         setPlacedWords(crosswordResult.placedWords);
+         
+        const newUserBoard = crosswordResult.board.map(row => 
+          row.map(cell => cell === '-' ? '-' : '')
+        );
+        setUserBoard(newUserBoard);
       }
     }
   }, [selectedWords]);
+
+  useEffect(() => {
+    if (selectedCell.length === 0 || !placedWords.length) return;
+    
+    const [row, col] = selectedCell;
+    const word = findWordAtPosition(row, col, selectedDirection);
+    
+    if (word) {
+      const directionSymbol = word.isHorizontal ? 'A' : 'D';
+      setCurrentClue(`${word.clueNumber}${directionSymbol}. ${word.clue}`);
+    }
+  }, [selectedCell, selectedDirection, placedWords]);
 
   const chooseWords = () => {
     if (!db) return;
@@ -43,34 +67,135 @@ function App() {
 
   const handleChangePuzzle = () => {
     chooseWords();
+    setSelectedCell([]);
+    setCurrentClue('');
+    setIncorrectCells([]);
+  };
+  
+  const handleCheckPuzzle = () => {
+    const newIncorrectCells = [];
+    
+    for (let row = 0; row < board.length; row++) {
+      for (let col = 0; col < board[0].length; col++) {
+        if (board[row][col] === '-') continue;
+        
+        if (userBoard[row][col] && userBoard[row][col] !== board[row][col]) {
+          newIncorrectCells.push([row, col]);
+        }
+      }
+    }
+    
+    setIncorrectCells(newIncorrectCells);
+  };
+  
+  const handleSolvePuzzle = () => {
+    const solvedBoard = board.map(row => [...row]);
+    setUserBoard(solvedBoard);
+    setIncorrectCells([]);
+  };
+
+  const findWordAtPosition = (row, col, direction) => {
+    const isHorizontal = direction === 'across';
+    
+    return placedWords.find(word => {
+      if (word.isHorizontal !== isHorizontal) return false;
+      
+      const wordLength = word.word.length;
+      const startRow = word.row;
+      const startCol = word.col;
+      
+      if (isHorizontal) {
+        return row === startRow && col >= startCol && col < startCol + wordLength;
+      } else {
+        return col === startCol && row >= startRow && row < startRow + wordLength;
+      }
+    });
+  };
+
+  const findNextWord = (currentWord) => {
+    if (!currentWord) return null;
+    
+    const sortedWords = [...placedWords].sort((a, b) => {
+      if (a.clueNumber === b.clueNumber) {
+        return a.isHorizontal ? -1 : 1;
+      }
+      return a.clueNumber - b.clueNumber;
+    });
+    
+    const currentIndex = sortedWords.findIndex(w => 
+      w.clueNumber === currentWord.clueNumber && w.isHorizontal === currentWord.isHorizontal
+    );
+    
+    if (currentIndex !== -1 && currentIndex < sortedWords.length - 1) {
+      return sortedWords[currentIndex + 1];
+    }
+    
+    return sortedWords[0]; 
   };
 
   return (
-    <Board 
-      board={board} 
-      placedWords={placedWords} 
-      onChangePuzzle={handleChangePuzzle} 
-    />
+    <div className="page">
+      <div className="left">
+        <LeftMenu onNewGame={handleChangePuzzle} />
+      </div>
+      <div className="top-clue">
+        {currentClue}
+      </div>
+      <div className="mid">
+        <Board 
+          board={board} 
+          userBoard={userBoard}
+          setUserBoard={setUserBoard}
+          placedWords={placedWords} 
+          onChangePuzzle={handleChangePuzzle}
+          selectedCell={selectedCell}
+          setSelectedCell={setSelectedCell}
+          selectedDirection={selectedDirection}
+          setSelectedDirection={setSelectedDirection}
+          findWordAtPosition={findWordAtPosition}
+          findNextWord={findNextWord}
+          incorrectCells={incorrectCells}
+          setIncorrectCells={setIncorrectCells}
+          onCheckPuzzle={handleCheckPuzzle}
+          onSolvePuzzle={handleSolvePuzzle}
+        />
+      </div>
+    </div>
   );
 }
 
-function MainMenu({ isInMenu }) {
-  if (isInMenu) return null;
-
+function LeftMenu({ onNewGame }) {
+  return (
+    <div className="left-menu">
+      <div className="menu-buttons">
+        <button className="menu-button" onClick={onNewGame}>New Game</button>
+        <button className="menu-button">Settings</button>
+        <button className="menu-button">Credits</button>
+      </div>
+    </div>
+  );
 }
 
-
-function Board({ board, placedWords, onChangePuzzle }) {
+function Board({ 
+  board, 
+  userBoard,
+  setUserBoard,
+  placedWords, 
+  onChangePuzzle,
+  selectedCell,
+  setSelectedCell,
+  selectedDirection,
+  setSelectedDirection,
+  findWordAtPosition,
+  findNextWord,
+  incorrectCells,
+  setIncorrectCells,
+  onCheckPuzzle,
+  onSolvePuzzle
+}) {
   const [numberedGrid, setNumberedGrid] = useState([]);
+  const boardRef = useRef(null);
   
-  const acrossClues = placedWords
-    ? placedWords.filter(word => word.isHorizontal).sort((a, b) => a.clueNumber - b.clueNumber)
-    : [];
-    
-  const downClues = placedWords
-    ? placedWords.filter(word => !word.isHorizontal).sort((a, b) => a.clueNumber - b.clueNumber)
-    : [];
-
   useEffect(() => {
     if (!board || board.length === 0 || !placedWords) return;
     
@@ -85,124 +210,177 @@ function Board({ board, placedWords, onChangePuzzle }) {
     setNumberedGrid(numbered);
   }, [board, placedWords]);
 
-  const styles = {
-    container: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      fontFamily: 'Arial, sans-serif',
-      maxWidth: '800px',
-      margin: '0 auto'
-    },
-    title: {
-      fontSize: '24px',
-      fontWeight: 'bold',
-      marginBottom: '20px'
-    },
-    gameContainer: {
-      display: 'flex',
-      flexDirection: 'column',
-      width: '100%'
-    },
-    boardAndCluesContainer: {
-      display: 'flex',
-      flexDirection: 'row',
-      gap: '20px',
-      marginBottom: '24px',
-      flexWrap: 'wrap',
-      justifyContent: 'center'
-    },
-    boardContainer: {
-      flexShrink: 0
-    },
-    board: {
-      display: 'grid',
-      gridTemplateRows: `repeat(${board.length}, 1fr)`,
-      border: '2px solid #333'
-    },
-    row: {
-      display: 'flex'
-    },
-    cell: {
-      position: 'relative',
-      width: '48px',
-      height: '48px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      border: '1px solid #aaa',
-      fontWeight: 'bold',
-      fontSize: '18px'
-    },
-    blackCell: {
-      backgroundColor: '#000'
-    },
-    whiteCell: {
-      backgroundColor: '#fff'
-    },
-    cellNumber: {
-      position: 'absolute',
-      top: '2px',
-      left: '4px',
-      fontSize: '10px'
-    },
-    cluesContainer: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '20px',
-      flex: 1,
-      minWidth: '300px'
-    },
-    clueSection: {
-      marginBottom: '20px'
-    },
-    clueHeading: {
-      fontSize: '18px',
-      fontWeight: 'bold',
-      marginBottom: '10px',
-      borderBottom: '1px solid #ccc',
-      paddingBottom: '5px'
-    },
-    clueList: {
-      listStyleType: 'none',
-      padding: 0,
-      margin: 0
-    },
-    clueItem: {
-      marginBottom: '8px',
-      fontSize: '14px'
-    },
-    clueNumber: {
-      fontWeight: 'bold',
-      marginRight: '5px'
-    },
-    button: {
-      padding: '10px 16px',
-      backgroundColor: '#4a6ea9',
-      color: 'white',
-      border: 'none',
-      borderRadius: '4px',
-      fontSize: '16px',
-      cursor: 'pointer',
-      alignSelf: 'center',
-      marginTop: '10px'
+  // Handle keyboard input
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (selectedCell.length === 0) return;
+      
+      const [row, col] = selectedCell;
+      
+      // Move with arrow keys
+      if (e.key === 'ArrowUp') {
+        moveToCell(row - 1, col);
+        e.preventDefault();
+      } else if (e.key === 'ArrowDown') {
+        moveToCell(row + 1, col);
+        e.preventDefault();
+      } else if (e.key === 'ArrowLeft') {
+        moveToCell(row, col - 1);
+        e.preventDefault();
+      } else if (e.key === 'ArrowRight') {
+        moveToCell(row, col + 1);
+        e.preventDefault();
+      } 
+      // Handle backspace
+      else if (e.key === 'Backspace') {
+        if (userBoard[row][col]) {
+          // Delete current cell and stay in place
+          const newUserBoard = [...userBoard];
+          newUserBoard[row][col] = '';
+          setUserBoard(newUserBoard);
+          
+          // Remove from incorrect cells if it was marked
+          if (incorrectCells.some(([r, c]) => r === row && c === col)) {
+            const newIncorrectCells = incorrectCells.filter(([r, c]) => !(r === row && c === col));
+            setIncorrectCells(newIncorrectCells);
+          }
+        } else {
+          // Move back and delete previous cell
+          const prevCell = getAdjacentCell(row, col, selectedDirection, -1);
+          if (prevCell) {
+            const [prevRow, prevCol] = prevCell;
+            const newUserBoard = [...userBoard];
+            newUserBoard[prevRow][prevCol] = '';
+            setUserBoard(newUserBoard);
+            
+            // Remove from incorrect cells if it was marked
+            if (incorrectCells.some(([r, c]) => r === prevRow && c === prevCol)) {
+              const newIncorrectCells = incorrectCells.filter(([r, c]) => !(r === prevRow && c === prevCol));
+              setIncorrectCells(newIncorrectCells);
+            }
+            
+            setSelectedCell([prevRow, prevCol]);
+          }
+        }
+        e.preventDefault();
+      }
+      // Handle space (toggle direction)
+      else if (e.key === ' ') {
+        setSelectedDirection(selectedDirection === 'across' ? 'down' : 'across');
+        e.preventDefault();
+      }
+      // Handle letter input (a-z, A-Z)
+      else if (/^[a-zA-Z]$/.test(e.key)) {
+        const letter = e.key.toUpperCase();
+        
+        // Update the userBoard with the new letter
+        const newUserBoard = [...userBoard];
+        newUserBoard[row][col] = letter;
+        setUserBoard(newUserBoard);
+        
+        // Remove from incorrect cells if it was marked
+        if (incorrectCells.some(([r, c]) => r === row && c === col)) {
+          const newIncorrectCells = incorrectCells.filter(([r, c]) => !(r === row && c === col));
+          setIncorrectCells(newIncorrectCells);
+        }
+        
+        // Move to the next cell in the current direction
+        const nextCell = getAdjacentCell(row, col, selectedDirection, 1);
+        if (nextCell) {
+          setSelectedCell(nextCell);
+        } else {
+          // If we've reached the end of the word, move to the next word
+          const currentWord = findWordAtPosition(row, col, selectedDirection);
+          if (currentWord) {
+            const nextWord = findNextWord(currentWord);
+            if (nextWord) {
+              setSelectedCell([nextWord.row, nextWord.col]);
+              setSelectedDirection(nextWord.isHorizontal ? 'across' : 'down');
+            }
+          }
+        }
+        e.preventDefault();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedCell, selectedDirection, userBoard, board, findWordAtPosition, findNextWord, incorrectCells]);
+
+  // Get the next or previous cell in the current direction
+  const getAdjacentCell = (row, col, direction, step) => {
+    const isHorizontal = direction === 'across';
+    let nextRow = isHorizontal ? row : row + step;
+    let nextCol = isHorizontal ? col + step : col;
+    
+    // Check if the next cell is valid
+    if (
+      nextRow >= 0 && nextRow < board.length &&
+      nextCol >= 0 && nextCol < board[0].length &&
+      board[nextRow][nextCol] !== '-'
+    ) {
+      return [nextRow, nextCol];
+    }
+    
+    return null;
+  };
+
+  const moveToCell = (row, col) => {
+    if (
+      row >= 0 && row < board.length &&
+      col >= 0 && col < board[0].length &&
+      board[row][col] !== '-'
+    ) {
+      setSelectedCell([row, col]);
+    }
+  };
+
+  const handleCellClick = (row, col) => {
+    if (board[row][col] === '-') return;
+    
+    if (selectedCell.length > 0 && selectedCell[0] === row && selectedCell[1] === col) {
+      setSelectedDirection(selectedDirection === 'across' ? 'down' : 'across');
+    } else if (selectedCell == "") {
+      setSelectedCell([row, col]);
     }
   };
 
   return (
     <div className="crossword-container">
-      <h2 className="crossword-title">CROSSWARD</h2>
-      
       <div className="game-container">
-        <div className="board-and-clues-container">
-          <div className="board-container">
-            <div className="board" style={{ gridTemplateRows: `repeat(${board.length}, 1fr)` }}>
-              {board.map((row, rowIndex) => (
-                <div key={rowIndex} className="board-row">
-                  {row.map((cell, colIndex) => (
+        <div ref={boardRef} className="board-container">
+          <div className="board" style={{ gridTemplateRows: `repeat(${board.length}, 1fr)` }}>
+            {board.map((row, rowIndex) => (
+              <div key={rowIndex} className="board-row">
+                {row.map((cell, colIndex) => {
+                  const isSelected = selectedCell.length > 0 && 
+                                    selectedCell[0] === rowIndex && 
+                                    selectedCell[1] === colIndex;
+                  
+                  let isPartOfSelectedWord = false;
+                  if (selectedCell.length > 0) {
+                    const currentWord = findWordAtPosition(selectedCell[0], selectedCell[1], selectedDirection);
+                    if (currentWord) {
+                      if (currentWord.isHorizontal) {
+                        isPartOfSelectedWord = rowIndex === currentWord.row && 
+                          colIndex >= currentWord.col && 
+                          colIndex < currentWord.col + currentWord.word.length;
+                      } else {
+                        isPartOfSelectedWord = colIndex === currentWord.col && 
+                          rowIndex >= currentWord.row && 
+                          rowIndex < currentWord.row + currentWord.word.length;
+                      }
+                    }
+                  }
+                  
+                  return (
                     <div 
                       key={`${rowIndex}-${colIndex}`} 
-                      className={`cell ${cell === '-' ? 'cell-black' : 'cell-white'}`}
+                      className={`cell ${cell === '-' ? 'cell-black' : 'cell-white'} 
+                                ${isSelected ? 'selected-cell' : ''} 
+                                ${isPartOfSelectedWord ? 'part-of-word' : ''}
+                                ${incorrectCells.some(([r, c]) => r === rowIndex && c === colIndex) ? 'incorrect-cell' : ''}`}
+                      onClick={() => handleCellClick(rowIndex, colIndex)}
                     >
                       {cell !== '-' && (
                         <>
@@ -211,51 +389,39 @@ function Board({ board, placedWords, onChangePuzzle }) {
                               {numberedGrid[rowIndex][colIndex]}
                             </span>
                           )}
-                          <span>
-                            {cell}
+                          <span className="cell-letter">
+                            {userBoard[rowIndex] && userBoard[rowIndex][colIndex]}
                           </span>
                         </>
                       )}
                     </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="clues-container">
-            <div className="clue-section">
-              <h3 className="clue-heading">Across</h3>
-              <ul className="clue-list">
-                {acrossClues.map((word, index) => (
-                  <li key={`across-${index}`} className="clue-item">
-                    <span className="clue-number">{word.clueNumber}.</span>
-                    {word.clue}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            
-            <div className="clue-section">
-              <h3 className="clue-heading">Down</h3>
-              <ul className="clue-list">
-                {downClues.map((word, index) => (
-                  <li key={`down-${index}`} className="clue-item">
-                    <span className="clue-number">{word.clueNumber}.</span>
-                    {word.clue}
-                  </li>
-                ))}
-              </ul>
-            </div>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </div>
         
-        <button 
-          className="crossword-button"
-          onClick={onChangePuzzle}
-        >
-          gen
-        </button>
+        <div className="button-container">
+          <button 
+            className="crossword-button"
+            onClick={onCheckPuzzle}
+          >
+            Check Puzzle
+          </button>
+          <button 
+            className="crossword-button"
+            onClick={onSolvePuzzle}
+          >
+            Solve Puzzle
+          </button>
+          <button 
+            className="crossword-button"
+            onClick={onChangePuzzle}
+          >
+            New Puzzle
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -333,14 +499,13 @@ function createCrossword(words, boardLength) {
       positions.push([r, c]);
     }
     
-    // Store the word object along with position info
     placedWords.push({ 
       word: wordObj.answer, 
       clue: wordObj.clue,
       row, 
       col, 
       isHorizontal,
-      clueNumber: null // Will be filled in later
+      clueNumber: null 
     });
     
     return positions;
