@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: row;
   height: 100vh;
-  font-family: Arial, sans-serif;
+  font-family: merchant, sans-serif;
   overflow: hidden;
 }
 
@@ -288,4 +288,9 @@
     width: 100%;
     height: auto;
   }
+}
+
+@font-face {
+  font-family: merchant;
+  src: url(../public/assets/fonts/merchant-copy.regular.ttf) format('truetype');
 }
