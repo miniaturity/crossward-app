@@ -1,6 +1,7 @@
 import './App.css';
 import { useState, useEffect, useRef } from 'react';
 import useWordDB from './WordDB';
+import { ITEMS } from './items';
 
 function App() {
   const db = useWordDB();
@@ -19,6 +20,7 @@ function App() {
   const [inGame, setInGame] = useState(false);
 
   const [points, setPoints] = useState(0);
+  const [inventory, setInventory] = useState([]);
 
   useEffect(() => {
     if (!db) return;
@@ -327,18 +329,30 @@ function RightMenu() {
   );
 }
 
+function BuyItem({ item, inv }) {
 
-function Shop({ inShop }) {
+}
+
+
+function Shop({ inShop, inventory }) {
   if (!inShop) return null;
 
-  const shopItems = [
-    
-  ];
+  const shopItems = [...ITEMS];
 
   return (
-    <>
+    <div className="shop">
+      {shopItems.map(item => {
+          <BuyItem 
+            item={item}
+            inv={inventory}
+          />
+      })}
 
-    </>
+      <div className="shop-keeper-jovial-merriment">
+        
+      </div>
+
+    </div>
   )
 
 }
