@@ -15,6 +15,7 @@ function App() {
   
   const [userBoard, setUserBoard] = useState([]);
   const [incorrectCells, setIncorrectCells] = useState([]);
+  const [correctCells, setCorrectCells] = useState([]);
   const [inGame, setInGame] = useState(false);
 
   const [points, setPoints] = useState(0);
@@ -54,7 +55,7 @@ function App() {
 
   const newGame = () => {
     setInGame(true);
-  }
+  };
 
   const chooseWords = () => {
     if (!db) return;
@@ -78,36 +79,43 @@ function App() {
     setSelectedCell([]);
     setCurrentClue('');
     setIncorrectCells([]);
+    setCorrectCells([]);
   };
   
   const handleCheckPuzzle = () => {
     const newIncorrectCells = [];
+    const newCorrectCells = [];
     
     for (let row = 0; row < board.length; row++) {
       for (let col = 0; col < board[0].length; col++) {
         if (board[row][col] === '-') continue;
         
-        if (userBoard[row][col] && userBoard[row][col] !== board[row][col]) {
-          newIncorrectCells.push([row, col]);
+        if (userBoard[row][col]) {
+          if (userBoard[row][col] !== board[row][col]) {
+            newIncorrectCells.push([row, col]);
+          } else {
+            newCorrectCells.push([row, col]);
+          }
         }
       }
     }
     
     setIncorrectCells(newIncorrectCells);
+    setCorrectCells(newCorrectCells);
   };
 
   const handleCheckWord = () => {
     if (selectedCell.length === 0) return;
-
+  
     const [row, col] = selectedCell;
     const currentWord = findWordAtPosition(row, col, selectedDirection);
     
     if (!currentWord) return;
     
     const newIncorrectCells = [...incorrectCells];
+    const newCorrectCells = [...correctCells];
     let allCellsCorrect = true;
     
-    // Check each letter of the current word
     for (let i = 0; i < currentWord.word.length; i++) {
       const letterRow = currentWord.isHorizontal ? currentWord.row : currentWord.row + i;
       const letterCol = currentWord.isHorizontal ? currentWord.col + i : currentWord.col;
@@ -123,19 +131,32 @@ function App() {
         allCellsCorrect = false;
         
         // Add to incorrect cells if not already there
-        if (!incorrectCells.some(([r, c]) => r === letterRow && c === letterCol)) {
+        if (!newIncorrectCells.some(([r, c]) => r === letterRow && c === letterCol)) {
           newIncorrectCells.push([letterRow, letterCol]);
         }
+        
+        // Remove from correct cells if it was previously marked correct
+        const correctCellIndex = newCorrectCells.findIndex(([r, c]) => r === letterRow && c === letterCol);
+        if (correctCellIndex !== -1) {
+          newCorrectCells.splice(correctCellIndex, 1);
+        }
       } else {
-        // Remove from incorrect cells if it was previously marked wrong but is now correct
+        // This cell is correct - mark it as such
+        // Remove from incorrect cells if it was previously marked wrong
         const cellIndex = newIncorrectCells.findIndex(([r, c]) => r === letterRow && c === letterCol);
         if (cellIndex !== -1) {
           newIncorrectCells.splice(cellIndex, 1);
+        }
+        
+        // Add to correct cells if not already there
+        if (!newCorrectCells.some(([r, c]) => r === letterRow && c === letterCol)) {
+          newCorrectCells.push([letterRow, letterCol]);
         }
       }
     }
     
     setIncorrectCells(newIncorrectCells);
+    setCorrectCells(newCorrectCells);
     
     // Award points if the entire word is correct
     if (allCellsCorrect && currentWord) {
@@ -205,7 +226,15 @@ function App() {
             <h1 className="game-title">CROSSWARD</h1>
           </div>) : null
         }
-
+          <div className="actions">
+            <button 
+              className="crossword-button"
+              onClick={handleCheckWord}
+              disabled={selectedCell.length === 0}
+            >
+              Check Word
+            </button>
+          </div>
           <Board 
             board={board} 
             userBoard={userBoard}
@@ -219,6 +248,7 @@ function App() {
             findWordAtPosition={findWordAtPosition}
             findNextWord={findNextWord}
             incorrectCells={incorrectCells}
+            correctCells={correctCells}
             setIncorrectCells={setIncorrectCells}
             onCheckPuzzle={handleCheckPuzzle}
             onCheckWord={handleCheckWord}
@@ -227,7 +257,7 @@ function App() {
           />
 
           <div className="points">
-            {points}
+            {points} PTS
           </div>
       </div>
       <div className="right">
@@ -297,6 +327,23 @@ function RightMenu() {
   );
 }
 
+
+function Shop({ inShop }) {
+  if (!inShop) return null;
+
+  const shopItems = [
+    
+  ];
+
+  return (
+    <>
+
+    </>
+  )
+
+}
+
+
 function Board({ 
   board, 
   userBoard,
@@ -314,7 +361,8 @@ function Board({
   onCheckPuzzle,
   onCheckWord,
   onSolvePuzzle,
-  inGame
+  inGame,
+  correctCells
 }) {
   const [numberedGrid, setNumberedGrid] = useState([]);
   const boardRef = useRef(null);
@@ -333,14 +381,12 @@ function Board({
     setNumberedGrid(numbered);
   }, [board, placedWords]);
 
-  // Handle keyboard input
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (selectedCell.length === 0) return;
       
       const [row, col] = selectedCell;
       
-      // Move with arrow keys
       if (e.key === 'ArrowUp') {
         moveToCell(row - 1, col);
         e.preventDefault();
@@ -354,20 +400,18 @@ function Board({
         moveToCell(row, col + 1);
         e.preventDefault();
       } 
-      // Handle backspace
       else if (e.key === 'Backspace') {
+        if (correctCells.includes([row, col])) return;
         if (userBoard[row][col]) {
           const newUserBoard = [...userBoard];
           newUserBoard[row][col] = '';
           setUserBoard(newUserBoard);
           
-          // Remove from incorrect cells if it was marked
           if (incorrectCells.some(([r, c]) => r === row && c === col)) {
             const newIncorrectCells = incorrectCells.filter(([r, c]) => !(r === row && c === col));
             setIncorrectCells(newIncorrectCells);
           }
         } else {
-          // Move back and delete previous cell
           const prevCell = getAdjacentCell(row, col, selectedDirection, -1);
           if (prevCell) {
             const [prevRow, prevCol] = prevCell;
@@ -375,7 +419,6 @@ function Board({
             newUserBoard[prevRow][prevCol] = '';
             setUserBoard(newUserBoard);
             
-            // Remove from incorrect cells if it was marked
             if (incorrectCells.some(([r, c]) => r === prevRow && c === prevCol)) {
               const newIncorrectCells = incorrectCells.filter(([r, c]) => !(r === prevRow && c === prevCol));
               setIncorrectCells(newIncorrectCells);
@@ -386,32 +429,26 @@ function Board({
         }
         e.preventDefault();
       }
-      // Handle space (toggle direction)
       else if (e.key === ' ') {
         setSelectedDirection(selectedDirection === 'across' ? 'down' : 'across');
         e.preventDefault();
       }
-      // Handle letter input (a-z, A-Z)
       else if (/^[a-zA-Z]$/.test(e.key)) {
         const letter = e.key.toUpperCase();
         
-        // Update the userBoard with the new letter
         const newUserBoard = [...userBoard];
         newUserBoard[row][col] = letter;
         setUserBoard(newUserBoard);
         
-        // Remove from incorrect cells if it was marked
         if (incorrectCells.some(([r, c]) => r === row && c === col)) {
           const newIncorrectCells = incorrectCells.filter(([r, c]) => !(r === row && c === col));
           setIncorrectCells(newIncorrectCells);
         }
         
-        // Move to the next cell in the current direction
         const nextCell = getAdjacentCell(row, col, selectedDirection, 1);
         if (nextCell) {
           setSelectedCell(nextCell);
         } else {
-          // If we've reached the end of the word, move to the next word
           const currentWord = findWordAtPosition(row, col, selectedDirection);
           if (currentWord) {
             const nextWord = findNextWord(currentWord);
@@ -429,13 +466,11 @@ function Board({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedCell, selectedDirection, userBoard, board, findWordAtPosition, findNextWord, incorrectCells]);
 
-  // Get the next or previous cell in the current direction
   const getAdjacentCell = (row, col, direction, step) => {
     const isHorizontal = direction === 'across';
     let nextRow = isHorizontal ? row : row + step;
     let nextCol = isHorizontal ? col + step : col;
     
-    // Check if the next cell is valid
     if (
       nextRow >= 0 && nextRow < board.length &&
       nextCol >= 0 && nextCol < board[0].length &&
@@ -471,13 +506,6 @@ function Board({
     <div className="crossword-container">
       <div className="game-container">
         <div className="button-container" style={{ marginBottom: '10px' }}>
-          <button 
-            className="crossword-button"
-            onClick={onCheckWord}
-            disabled={selectedCell.length === 0}
-          >
-            Check Word
-          </button>
         </div>
         <div ref={boardRef} className="board-container">
           <div className="board" style={{ gridTemplateRows: `repeat(${board.length}, 1fr)` }}>
@@ -510,7 +538,8 @@ function Board({
                       className={`cell ${cell === '-' ? 'cell-black' : 'cell-white'} 
                                 ${isSelected ? 'selected-cell' : ''} 
                                 ${isPartOfSelectedWord ? 'part-of-word' : ''}
-                                ${incorrectCells.some(([r, c]) => r === rowIndex && c === colIndex) ? 'incorrect-cell' : ''}`}
+                                ${incorrectCells.some(([r, c]) => r === rowIndex && c === colIndex) ? 'incorrect-cell' : ''}
+                                ${correctCells.some(([r, c]) => r === rowIndex && c === colIndex) ? 'correct-cell' : ''}`}
                       onClick={() => handleCellClick(rowIndex, colIndex)}
                     >
                       {cell !== '-' && (
@@ -532,27 +561,6 @@ function Board({
             ))}
           </div>
         </div>
-        
-        {/* <div className="button-container">
-          <button 
-            className="crossword-button"
-            onClick={onCheckPuzzle}
-          >
-            Check Puzzle
-          </button>
-          <button 
-            className="crossword-button"
-            onClick={onSolvePuzzle}
-          >
-            Solve Puzzle
-          </button>
-          <button 
-            className="crossword-button"
-            onClick={onChangePuzzle}
-          >
-            New Puzzle
-          </button>
-        </div> */}
       </div>
     </div>
   );
@@ -672,7 +680,7 @@ function createCrossword(words, boardLength) {
             const positions = placeWord(wordObj, r, c, isHorizontal);
             if (tryPlaceWords(index + 1)) return true;
             removeWord(positions);
-            placed = true;
+            placed = true;  
           }
         }
       }
