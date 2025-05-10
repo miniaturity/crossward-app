@@ -20,7 +20,12 @@ function App() {
   const [inGame, setInGame] = useState(false);
 
   const [points, setPoints] = useState(0);
+  const [balance, setBalance] = useState(0.0);
   const [inventory, setInventory] = useState([]);
+
+  const [inShop, setInShop] = useState(false);
+  const [shopkeeperDialogue, setShopkeeperDialogue] = useState("Pssst...");
+
 
   useEffect(() => {
     if (!db) return;
@@ -122,35 +127,28 @@ function App() {
       const letterRow = currentWord.isHorizontal ? currentWord.row : currentWord.row + i;
       const letterCol = currentWord.isHorizontal ? currentWord.col + i : currentWord.col;
       
-      // If the cell is empty, we don't mark it as incorrect
       if (!userBoard[letterRow][letterCol]) {
         allCellsCorrect = false;
         continue;
       }
       
-      // Check if the user input matches the solution
       if (userBoard[letterRow][letterCol] !== board[letterRow][letterCol]) {
         allCellsCorrect = false;
         
-        // Add to incorrect cells if not already there
         if (!newIncorrectCells.some(([r, c]) => r === letterRow && c === letterCol)) {
           newIncorrectCells.push([letterRow, letterCol]);
         }
         
-        // Remove from correct cells if it was previously marked correct
         const correctCellIndex = newCorrectCells.findIndex(([r, c]) => r === letterRow && c === letterCol);
         if (correctCellIndex !== -1) {
           newCorrectCells.splice(correctCellIndex, 1);
         }
       } else {
-        // This cell is correct - mark it as such
-        // Remove from incorrect cells if it was previously marked wrong
         const cellIndex = newIncorrectCells.findIndex(([r, c]) => r === letterRow && c === letterCol);
         if (cellIndex !== -1) {
           newIncorrectCells.splice(cellIndex, 1);
         }
         
-        // Add to correct cells if not already there
         if (!newCorrectCells.some(([r, c]) => r === letterRow && c === letterCol)) {
           newCorrectCells.push([letterRow, letterCol]);
         }
@@ -160,10 +158,7 @@ function App() {
     setIncorrectCells(newIncorrectCells);
     setCorrectCells(newCorrectCells);
     
-    // Award points if the entire word is correct
     if (allCellsCorrect && currentWord) {
-      // We could check if this word has already been rewarded points before
-      // For now, just award points based on word length
       setPoints(prev => prev + currentWord.word.length);
     }
   };
@@ -228,6 +223,8 @@ function App() {
             <h1 className="game-title">CROSSWARD</h1>
           </div>) : null
         }
+        {!inShop ? (
+          <>
           <div className="actions">
             <button 
               className="crossword-button"
@@ -236,6 +233,10 @@ function App() {
             >
               Check Word
             </button>
+            <button 
+              className="crossword-button"
+              onClick={() => {setInShop(true)}}
+            > Shop </button>
           </div>
           <Board 
             board={board} 
@@ -260,10 +261,22 @@ function App() {
 
           <div className="points">
             {points} PTS
+            ${balance}
           </div>
+          </>
+        ) : ( <Shop 
+          inventory={inventory}
+          balance={balance}
+          shopkeeperDialogue={shopkeeperDialogue}
+          setShopkeeperDialogue={setShopkeeperDialogue}
+        />)  
+        }
+
+        
       </div>
       <div className="right">
         <RightMenu />
+        
       </div>
     </div>
   );
@@ -329,33 +342,72 @@ function RightMenu() {
   );
 }
 
-function BuyItem({ item, inv }) {
-
-}
-
-
-function Shop({ inShop, inventory }) {
-  if (!inShop) return null;
-
-  const shopItems = [...ITEMS];
+const BuyItem = ({ item, inv, bal }) => {  
+  const canBuy = bal >= item.price;
 
   return (
-    <div className="shop">
-      {shopItems.map(item => {
+    <div className="shop-item">
+      {item.img && <img src={item.img} alt={item.name} className="shop-item-image" />}
+      <h3 className="shop-item-name">{item.name}</h3>
+      <p className="shop-item-price">${item.cost}</p>
+      <button 
+        className="buy-button" 
+        disabled={!canBuy}
+        onClick={() => {inv.push(item.content)}}
+      >
+        Buy
+      </button>
+    </div>
+  );
+}
+
+const Shop = ({ inventory, balance, shopkeeperDialogue, setShopkeeperDialogue }) => {
+
+  const dialogues = [
+    "HRT? Havent heard that name in a long time...",
+    "Hi -__-",
+    "buy something.."
+  ];
+
+  const poorDialogues = [
+    "you're broke :I",
+
+  ]
+
+  const shopItems = [...ITEMS];
+  
+  const changeDialogue = () => {
+    const randomIndex = Math.floor(Math.random() * dialogues.length);
+    setShopkeeperDialogue(dialogues[randomIndex]);
+  };
+  
+  return (
+    <div className="shop-container">
+      <div className="shop-items">
+        {shopItems.map((item, index) => (
           <BuyItem 
+            key={index}
             item={item}
             inv={inventory}
+            bal={balance}
           />
-      })}
-
-      <div className="shop-keeper-jovial-merriment">
-        
+        ))}
       </div>
-
+      
+      <div className="shop-keeper-section">
+        <div 
+          className="shop-keeper-jovial-merriment"
+          onClick={changeDialogue}
+        >
+          <img src="assets/jovial.png" alt="Shopkeeper" />
+        </div>
+        <div className="shop-keeper-dialogue">
+          {shopkeeperDialogue}
+        </div>
+      </div>
     </div>
-  )
-
-}
+  );
+};
 
 
 function Board({ 
