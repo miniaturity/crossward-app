@@ -31,12 +31,23 @@ body {
   z-index: -99;
 }
 
+.text-3d-left {
+  transform: perspective(500px) rotateY(30deg) rotateZ(0deg) translateX(150%) scaleX(150%);
+  animation: float-left 6s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+
+.text-3d-right {
+  transform: perspective(500px) rotateY(330deg) rotateZ(0deg) translateX(-150%) scaleX(150%);
+  transform-style: preserve-3d;
+}
+
 @keyframes scroll-left {
   0% {
     transform: translateX(0);
   }
   100% {
-    transform: translateX(-50%); /* Move left by half its width */
+    transform: translateX(-50%); 
   }
 }
 
@@ -138,12 +149,49 @@ body {
 .mid {
   position: relative;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center; 
   flex-grow: 1;
   padding: 20px;
   width: calc(100% - 450px);
+}
+
+.mid-left {
+  width: 10%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mid-center {
+  width: 80%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.mid-right {
+  width: 10%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.points-display {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: white;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.balance-display {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #facc15;
+  text-align: center;
 }
 
 .crossword-container {
@@ -300,18 +348,37 @@ body {
 
 .crossword-button {
   padding: 10px 16px;
-  background-color: #4aa94a;
-  color: white;
+  width: 200%;
+  background-color: #00000000;
+  text-align: center;
+  padding: 10px 5px;
+  color: #000;
   border: none;
-  font-size: 12px;
   cursor: pointer;
   transition: background-color 0.2s ease;
   font-family: small-merchant;
-  font-size: 2rem;
+  font-size: 3rem;
+}
+
+.actions {
+  gap: 5px;
+  display: flex;
+  flex-direction: column;
+}
+
+.actions-title {
+  padding: 10px 16px;
+  width: 200%;
+  text-align: center;
+  padding: 10px 5px;
+  border: none;
+  transition: background-color 0.2s ease;
+  font-family: small-merchant;
+  font-size: 7rem;
 }
 
 .crossword-button:hover {
-  background-color: #3a5d96;
+  background-color: #ffffff8c;
 }
 
 .clues-container {
@@ -375,7 +442,6 @@ body {
   border: 4px solid #ecc94b;
   padding: 1.5rem;
   margin: 0 auto;
-  box-shadow: 0 10px 15px -3px rgb(0, 0, 0);
   cursor: pointer;
 }
 
@@ -415,32 +481,82 @@ body {
 }
 
 .shop-container {
-  width: 50vw;
+  width: 80vw;
+  max-width: 1000px;
   margin: 0 auto;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 2rem;
   padding: 2rem;
   background-color: #3f3f3f;
 }
 
-.shop-items {
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1.5rem;
-  padding: 1.5rem;
+.shop-interior {
+  position: relative;
+  height: 600px;
   background-color: #5c5c5c;
-  max-height: 70vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  overflow: hidden;
 }
 
+/* Shelves styling */
+.shop-shelf {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: 180px;
+  margin-bottom: 10px;
+  background-color: #8a6e5a;
+  padding: 10px;
+  position: relative;
+}
+
+.shop-shelf:after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 10px;
+  background-color: #6d573e;
+}
+
+.top-shelf {
+  margin-bottom: 20px;
+}
+
+.bottom-shelf {
+  margin-bottom: 40px;
+}
+
+/* Counter styling */
+.shop-counter {
+  position: absolute;
+  bottom: 130px;
+  left: 10%;
+  right: 10%;
+  height: 100px;
+}
+
+.counter-top {
+  height: 20px;
+  background-color: #a87c50;
+}
+
+.counter-front {
+  height: 80px;
+  background-color: #8a6e5a;
+}
+
+/* Shopkeeper styling */
 .shop-keeper-section {
-  width: 220px;
+  position: absolute;
+  bottom: 140px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
+  z-index: 10;
 }
 
 .shop-keeper-jovial-merriment {
@@ -450,8 +566,9 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  animation: idle-rotate 2s infinite;
-
+  cursor: pointer;
+  animation: idle-sway 4s ease-in-out infinite;
+  transform-origin: bottom center;
 }
 
 .shop-keeper-jovial-merriment img {
@@ -462,13 +579,13 @@ body {
 
 .shop-keeper-dialogue {
   position: relative;
-  background-color: #5c5c5c;
+  background-color: #e6e6e6;
   padding: 1rem;
-  margin-top: 1.5rem;
-  font-size: 0.9rem;
-  color: #fff;
-  width: 100%;
-  min-height: 80px;
+  margin-top: 1rem;
+  font-size: 1rem;
+  color: #333;
+  width: 220px;
+  min-height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -482,26 +599,24 @@ body {
   transform: translateX(-50%);
   border-width: 0 10px 10px 10px;
   border-style: solid;
-  border-color: #5c5c5c transparent;
+  border-color: #e6e6e6 transparent;
 }
 
 .shop-item {
-  background-color: #5c5c5c;
-  padding: 1rem;
+  padding: 0.75rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  transition: transform 0.2s, box-shadow 0.2s;
+  max-width: 120px;
 }
 
-.shop-item:hover {
-  transform: translateY(-5px);
-}
 
 .shop-item-name {
   font-weight: 600;
   margin: 0.5rem 0;
   color: #2a9d8f;
+  text-align: center;
+  font-size: 0.9rem;
 }
 
 .shop-item-price {
@@ -511,17 +626,19 @@ body {
 }
 
 .shop-item-image {
-  width: 100px;
-  height: 100px;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
 }
 
 .buy-button {
   background-color: #2a9d8f;
   color: white;
   border: none;
-  padding: 0.5rem 1rem;
+  padding: 0.4rem 0.8rem;
   cursor: pointer;
   transition: background-color 0.2s;
+  font-size: 0.8rem;
 }
 
 .buy-button:hover {
@@ -531,6 +648,24 @@ body {
 .buy-button:disabled {
   background-color: #cccccc;
   cursor: not-allowed;
+}
+
+@keyframes idle-sway {
+  0% {
+    transform: rotate(0deg) translateY(0);
+  }
+  25% {
+    transform: rotate(2deg) translateY(-3px);
+  }
+  50% {
+    transform: rotate(0deg) translateY(0);
+  }
+  75% {
+    transform: rotate(-2deg) translateY(-2px);
+  }
+  100% {
+    transform: rotate(0deg) translateY(0);
+  }
 }
 
 
@@ -596,6 +731,8 @@ body {
   .cell-letter {
     font-size: 14px;
   }
+
+  
 }
 
 @font-face {
@@ -615,6 +752,20 @@ body {
 
   100% {
       transform: translateY(0);
+  }
+}
+
+@keyframes float-left {
+  0% {
+    transform: perspective(500px) rotateY(30deg) rotateZ(0deg) translateX(150%) scaleX(150%) translateY(0px);
+  }
+
+  50% {
+    transform: perspective(500px) rotateY(30deg) rotateZ(0deg) translateX(150%) scaleX(150%) translateY(-20px);
+  }
+
+  100% {
+    transform: perspective(500px) rotateY(30deg) rotateZ(0deg) translateX(150%) scaleX(150%) translateY(0px);
   }
 }
 

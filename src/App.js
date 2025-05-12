@@ -213,74 +213,168 @@ function App() {
       <div className="left">
         <LeftMenu onNewGame={newGame} />
       </div>
+
       <div className="top-clue">
-        {currentClue}
+              {currentClue}
       </div>
-      <div className="mid rainbow-container">
-        <div className="rainbow-background"></div>
-        { inGame === false ?
-          (<div className="intro-overlay">
-            <h1 className="game-title">CROSSWARD</h1>
-          </div>) : null
-        }
-        {!inShop ? (
-          <>
-          <div className="actions">
-            <button 
-              className="crossword-button"
-              onClick={handleCheckWord}
-              disabled={selectedCell.length === 0}
-            >
-              Check Word
-            </button>
-            <button 
-              className="crossword-button"
-              onClick={() => {setInShop(true)}}
-            > Shop </button>
-          </div>
-          <Board 
-            board={board} 
-            userBoard={userBoard}
-            setUserBoard={setUserBoard}
-            placedWords={placedWords} 
-            onChangePuzzle={handleChangePuzzle}
-            selectedCell={selectedCell}
-            setSelectedCell={setSelectedCell}
-            selectedDirection={selectedDirection}
-            setSelectedDirection={setSelectedDirection}
-            findWordAtPosition={findWordAtPosition}
-            findNextWord={findNextWord}
-            incorrectCells={incorrectCells}
-            correctCells={correctCells}
-            setIncorrectCells={setIncorrectCells}
-            onCheckPuzzle={handleCheckPuzzle}
-            onCheckWord={handleCheckWord}
-            onSolvePuzzle={handleSolvePuzzle}
-            inGame={inGame}
-          />
-
-          <div className="points">
-            {points} PTS
-            ${balance}
-          </div>
-          </>
-        ) : ( <Shop 
-          inventory={inventory}
-          balance={balance}
-          shopkeeperDialogue={shopkeeperDialogue}
-          setShopkeeperDialogue={setShopkeeperDialogue}
-        />)  
-        }
-
-        
-      </div>
+      
+      <MidSection 
+        inGame={inGame}
+        inShop={inShop}
+        setInShop={setInShop}
+        currentClue={currentClue}
+        handleCheckWord={handleCheckWord}
+        board={board}
+        userBoard={userBoard}
+        setUserBoard={setUserBoard}
+        placedWords={placedWords}
+        handleChangePuzzle={handleChangePuzzle}
+        selectedCell={selectedCell}
+        setSelectedCell={setSelectedCell}
+        selectedDirection={selectedDirection}
+        setSelectedDirection={setSelectedDirection}
+        findWordAtPosition={findWordAtPosition}
+        findNextWord={findNextWord}
+        incorrectCells={incorrectCells}
+        correctCells={correctCells}
+        setIncorrectCells={setIncorrectCells}
+        handleCheckPuzzle={handleCheckPuzzle}
+        handleSolvePuzzle={handleSolvePuzzle}
+        points={points}
+        balance={balance}
+        inventory={inventory}
+        shopkeeperDialogue={shopkeeperDialogue}
+        setShopkeeperDialogue={setShopkeeperDialogue}
+        Shop={Shop}
+        Board={Board}
+      />
+      
       <div className="right">
         <RightMenu />
-        
       </div>
     </div>
   );
 }
+
+const MidSection = ({ 
+  inGame, 
+  inShop, 
+  currentClue, 
+  handleCheckWord, 
+  setInShop, 
+  board, 
+  userBoard, 
+  setUserBoard, 
+  placedWords,
+  handleChangePuzzle,
+  selectedCell, 
+  setSelectedCell, 
+  selectedDirection, 
+  setSelectedDirection,
+  findWordAtPosition, 
+  findNextWord, 
+  incorrectCells, 
+  correctCells, 
+  setIncorrectCells,
+  handleCheckPuzzle, 
+  handleSolvePuzzle, 
+  points, 
+  balance,
+  inventory,
+  shopkeeperDialogue,
+  setShopkeeperDialogue,
+  Shop,
+  Board
+}) => {
+  return (
+    <div className="mid rainbow-container">
+      <div className="rainbow-background"></div>
+      {inGame === false && (
+        <div className="intro-overlay">
+          <h1 className="game-title">CROSSWARD</h1>
+        </div>
+      )}
+      
+      {!inShop ? (
+        <>
+          <div className="mid-left">
+            <div className="actions text-3d-left">
+
+                <h1 className="actions-title">
+                  ACTIONS
+                </h1>
+
+                <button 
+                  className="crossword-button"
+                  onClick={() => {setInShop(true)}}
+                > 
+                  Shop 
+                </button>
+                <button 
+                  className="crossword-button"
+                  onClick={handleCheckWord}
+                  disabled={selectedCell.length === 0}
+                >
+                  Check Word
+                </button>
+                <button 
+                  className="crossword-button"
+                  onClick={handleCheckPuzzle}
+                >
+                  Check Puzzle
+                </button>
+                <button 
+                  className="crossword-button"
+                  onClick={handleSolvePuzzle}
+                >
+                  Solve Puzzle
+                </button>
+            </div>
+          </div>
+          
+          <div className="mid-center">
+            <Board 
+              board={board} 
+              userBoard={userBoard}
+              setUserBoard={setUserBoard}
+              placedWords={placedWords} 
+              onChangePuzzle={handleChangePuzzle}
+              selectedCell={selectedCell}
+              setSelectedCell={setSelectedCell}
+              selectedDirection={selectedDirection}
+              setSelectedDirection={setSelectedDirection}
+              findWordAtPosition={findWordAtPosition}
+              findNextWord={findNextWord}
+              incorrectCells={incorrectCells}
+              correctCells={correctCells}
+              setIncorrectCells={setIncorrectCells}
+              onCheckPuzzle={handleCheckPuzzle}
+              onCheckWord={handleCheckWord}
+              onSolvePuzzle={handleSolvePuzzle}
+              inGame={inGame}
+            />
+          </div>
+          
+          <div className="mid-right text-3d-right">
+            <div className="points-display">
+              {points} PTS
+            </div>
+            <div className="balance-display">
+              ${balance}
+            </div>
+          </div>
+        </>
+      ) : (
+        <Shop 
+          inventory={inventory}
+          balance={balance}
+          shopkeeperDialogue={shopkeeperDialogue}
+          setShopkeeperDialogue={setShopkeeperDialogue}
+        />
+      )}
+    </div>
+  );
+};
 
 function LeftMenu({ onNewGame }) {
   const [visibleButtons, setVisibleButtons] = useState(0);
@@ -375,6 +469,9 @@ const Shop = ({ inventory, balance, shopkeeperDialogue, setShopkeeperDialogue })
   ]
 
   const shopItems = [...ITEMS];
+
+  const topShelfItems = shopItems.slice(0, Math.ceil(shopItems.length / 2));
+  const bottomShelfItems = shopItems.slice(Math.ceil(shopItems.length / 2));
   
   const changeDialogue = () => {
     const randomIndex = Math.floor(Math.random() * dialogues.length);
@@ -383,26 +480,44 @@ const Shop = ({ inventory, balance, shopkeeperDialogue, setShopkeeperDialogue })
   
   return (
     <div className="shop-container">
-      <div className="shop-items">
-        {shopItems.map((item, index) => (
-          <BuyItem 
-            key={index}
-            item={item}
-            inv={inventory}
-            bal={balance}
-          />
-        ))}
-      </div>
-      
-      <div className="shop-keeper-section">
-        <div 
-          className="shop-keeper-jovial-merriment"
-          onClick={changeDialogue}
-        >
-          <img src="assets/jovial.png" alt="Shopkeeper" />
+      <div className="shop-interior">
+        <div className="shop-shelf top-shelf">
+          {topShelfItems.map((item, index) => (
+            <BuyItem 
+              key={index}
+              item={item}
+              inv={inventory}
+              bal={balance}
+            />
+          ))}
         </div>
-        <div className="shop-keeper-dialogue">
-          {shopkeeperDialogue}
+        
+        <div className="shop-shelf bottom-shelf">
+          {bottomShelfItems.map((item, index) => (
+            <BuyItem 
+              key={index}
+              item={item}
+              inv={inventory}
+              bal={balance}
+            />
+          ))}
+        </div>
+        
+        <div className="shop-counter">
+          <div className="counter-top"></div>
+          <div className="counter-front"></div>
+        </div>
+        
+        <div className="shop-keeper-section">
+          <div 
+            className="shop-keeper-jovial-merriment"
+            onClick={changeDialogue}
+          >
+            <img src="assets/jovial.png" alt="Shopkeeper" />
+          </div>
+          <div className="shop-keeper-dialogue">
+            {shopkeeperDialogue}
+          </div>
         </div>
       </div>
     </div>
