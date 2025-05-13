@@ -20,11 +20,10 @@ function App() {
   const [inGame, setInGame] = useState(false);
 
   const [points, setPoints] = useState(0);
-  const [balance, setBalance] = useState(0.0);
+  const [balance, setBalance] = useState(100);
   const [inventory, setInventory] = useState([]);
 
   const [inShop, setInShop] = useState(false);
-  const [shopkeeperDialogue, setShopkeeperDialogue] = useState("Pssst...");
 
 
   useEffect(() => {
@@ -113,6 +112,8 @@ function App() {
 
   const handleCheckWord = () => {
     if (selectedCell.length === 0) return;
+
+    const isMoneyWord = getRandomIntInclusive(1, 10);
   
     const [row, col] = selectedCell;
     const currentWord = findWordAtPosition(row, col, selectedDirection);
@@ -159,6 +160,7 @@ function App() {
     setCorrectCells(newCorrectCells);
     
     if (allCellsCorrect && currentWord) {
+      if (isMoneyWord > 7) setBalance(prev => prev + Math.floor(currentWord.word.length / 2))
       setPoints(prev => prev + currentWord.word.length);
     }
   };
@@ -211,7 +213,7 @@ function App() {
   return (
     <div className="page">
       <div className="left">
-        <LeftMenu onNewGame={newGame} />
+        <LeftMenu onNewGame={newGame} inGame={inGame} />
       </div>
 
       <div className="top-clue">
@@ -242,9 +244,8 @@ function App() {
         handleSolvePuzzle={handleSolvePuzzle}
         points={points}
         balance={balance}
+        setBalance={setBalance}
         inventory={inventory}
-        shopkeeperDialogue={shopkeeperDialogue}
-        setShopkeeperDialogue={setShopkeeperDialogue}
         Shop={Shop}
         Board={Board}
       />
@@ -280,9 +281,8 @@ const MidSection = ({
   handleSolvePuzzle, 
   points, 
   balance,
+  setBalance,
   inventory,
-  shopkeeperDialogue,
-  setShopkeeperDialogue,
   Shop,
   Board
 }) => {
@@ -313,7 +313,7 @@ const MidSection = ({
                 <button 
                   className="crossword-button"
                   onClick={handleCheckWord}
-                  disabled={selectedCell.length === 0}
+                  disabled={selectedCell.length <= 1}
                 >
                   Check Word
                 </button>
@@ -356,6 +356,9 @@ const MidSection = ({
           </div>
           
           <div className="mid-right text-3d-right">
+            <h1 className="display-title">
+              STATS
+            </h1>
             <div className="points-display">
               {points} PTS
             </div>
@@ -368,15 +371,15 @@ const MidSection = ({
         <Shop 
           inventory={inventory}
           balance={balance}
-          shopkeeperDialogue={shopkeeperDialogue}
-          setShopkeeperDialogue={setShopkeeperDialogue}
+          setBalance={setBalance}
+          setInShop={setInShop}
         />
       )}
     </div>
   );
 };
 
-function LeftMenu({ onNewGame }) {
+function LeftMenu({ onNewGame, inGame }) {
   const [visibleButtons, setVisibleButtons] = useState(0);
   
   useEffect(() => {
@@ -397,7 +400,7 @@ function LeftMenu({ onNewGame }) {
   }, []);
 
   const menuButtons = [
-    { name: "New Game", action: onNewGame },
+    { name: "New Game", action: onNewGame, disabled: inGame },
     { name: "Settings", action: () => {} },
     { name: "Credits", action: () => {} }
   ];
@@ -410,6 +413,7 @@ function LeftMenu({ onNewGame }) {
             key={button.name}
             className={`menu-button ${index < visibleButtons ? 'visible' : ''}`} 
             onClick={button.action}
+            disabled={button.disabled}
           >
             {button.name}
           </button>
@@ -436,27 +440,35 @@ function RightMenu() {
   );
 }
 
-const BuyItem = ({ item, inv, bal }) => {  
-  const canBuy = bal >= item.price;
+const BuyItem = ({ item, inv, bal, setInShop, setBalance }) => {  
+  const canBuy = bal >= item.cost;
+
+  const buy = (item) => {
+    inv.push(item.content);
+    setBalance(prev => prev - item.cost);
+  }
 
   return (
-    <div className="shop-item">
-      {item.img && <img src={item.img} alt={item.name} className="shop-item-image" />}
-      <h3 className="shop-item-name">{item.name}</h3>
-      <p className="shop-item-price">${item.cost}</p>
+    <div className="item-buttons">
       <button 
         className="buy-button" 
         disabled={!canBuy}
-        onClick={() => {inv.push(item.content)}}
+        onClick={() => {buy(item)}}
       >
         Buy
+      </button>
+      <button
+        className="back-button"
+        onClick={() => {setInShop(false)}}
+      >
+        Back
       </button>
     </div>
   );
 }
 
-const Shop = ({ inventory, balance, shopkeeperDialogue, setShopkeeperDialogue }) => {
-
+const Shop = ({ inventory, balance, setBalance, setInShop }) => {
+  const [selectedItem, setSelectedItem] = useState(null);
   const dialogues = [
     "HRT? Havent heard that name in a long time...",
     "Hi -__-",
@@ -470,55 +482,70 @@ const Shop = ({ inventory, balance, shopkeeperDialogue, setShopkeeperDialogue })
 
   const shopItems = [...ITEMS];
 
-  const topShelfItems = shopItems.slice(0, Math.ceil(shopItems.length / 2));
-  const bottomShelfItems = shopItems.slice(Math.ceil(shopItems.length / 2));
-  
-  const changeDialogue = () => {
-    const randomIndex = Math.floor(Math.random() * dialogues.length);
-    setShopkeeperDialogue(dialogues[randomIndex]);
+  const handleSelectItem = (item) => {
+    setSelectedItem(item);
   };
   
+
+  useEffect(() => {
+    if (shopItems.length > 0 && !selectedItem) {
+      setSelectedItem(shopItems[0]);
+    }
+  }, []); 
+  
   return (
-    <div className="shop-container">
-      <div className="shop-interior">
-        <div className="shop-shelf top-shelf">
-          {topShelfItems.map((item, index) => (
-            <BuyItem 
+   <div className="shop-container">
+      <div className="shop-items-list">
+        <div className="shop-title"> <h2>Shop Items <strong>[${balance}]</strong></h2></div>
+        <div className="items-scroll-container">
+          {shopItems.map((item, index) => (
+            <div 
               key={index}
-              item={item}
-              inv={inventory}
-              bal={balance}
-            />
+              className={`shop-list-item ${selectedItem === item ? 'selected' : ''}`}
+              onClick={() => handleSelectItem(item)}
+            >
+
+              <div className="shop-list-item-image">
+                <img src={item.img} alt={item.name} />
+              </div>
+
+              <div className="shop-list-item-details">
+                <div className="shop-list-item-name">{item.name}</div>
+                <div className="shop-list-item-price">${item.cost}</div>
+              </div>
+            </div>
           ))}
         </div>
-        
-        <div className="shop-shelf bottom-shelf">
-          {bottomShelfItems.map((item, index) => (
-            <BuyItem 
-              key={index}
-              item={item}
-              inv={inventory}
-              bal={balance}
-            />
-          ))}
-        </div>
-        
-        <div className="shop-counter">
-          <div className="counter-top"></div>
-          <div className="counter-front"></div>
-        </div>
-        
-        <div className="shop-keeper-section">
-          <div 
-            className="shop-keeper-jovial-merriment"
-            onClick={changeDialogue}
-          >
-            <img src="assets/jovial.png" alt="Shopkeeper" />
-          </div>
-          <div className="shop-keeper-dialogue">
-            {shopkeeperDialogue}
-          </div>
-        </div>
+      </div>
+      
+      <div className="shop-item-detail">
+        {selectedItem ? (
+          <>
+            <div className="detail-image-container">
+              <img 
+                src={selectedItem.img} 
+                alt={selectedItem.name} 
+                className="detail-image" 
+              />
+            </div>
+            <div className="detail-info">
+              <h2 className="detail-name">{selectedItem.name}</h2>
+              <div className="detail-price">${selectedItem.cost}</div>
+              <div className="detail-description">
+                {selectedItem.desc || "No description available for this item."}
+              </div>
+              <BuyItem 
+                item={selectedItem}
+                inv={inventory}
+                bal={balance}
+                setBalance={setBalance}
+                setInShop={setInShop}
+              />
+            </div>
+          </>
+        ) : (
+          <div className="no-selection">Select an item to view details</div>
+        )}
       </div>
     </div>
   );
