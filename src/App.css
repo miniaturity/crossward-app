@@ -503,8 +503,6 @@ body {
   display: flex;
   height: 50vh;
 }
-
-/* Left side - Item list */
 .shop-items-list {
   width: 35%;
   display: flex;
@@ -665,6 +663,11 @@ body {
   cursor: not-allowed;
 }
 
+.timer-low {
+  color: red;
+  animation: title-shake 0.5s steps(2) infinite;
+}
+
 @media (max-width: 1280px) {
   .shop-title {
     font-size: 1rem;
@@ -698,6 +701,10 @@ body {
   100% {
     transform: rotate(0deg) translateY(0);
   }
+}
+
+@keyframes low-timer {
+
 }
 
 

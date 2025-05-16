@@ -24,6 +24,8 @@ function App() {
   const [inventory, setInventory] = useState([]);
 
   const [inShop, setInShop] = useState(false);
+  const [time, setTime] = useState(30); //seconds 
+  const [mult, setMult] = useState(1);
 
 
   useEffect(() => {
@@ -61,6 +63,20 @@ function App() {
 
   const newGame = () => {
     setInGame(true);
+
+    if (time <= 0) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTime((prevSeconds) => {
+        if (prevSeconds <= 0) {
+          handleChangePuzzle();
+          return 30;
+        }
+        return prevSeconds - 1;
+      });
+    }, 1000);
   };
 
   const chooseWords = () => {
@@ -73,6 +89,8 @@ function App() {
       
       const randomIndex = Math.floor(Math.random() * words.length);
       const wordObj = words[randomIndex];
+
+      if (results.includes(wordObj)) continue;
       
       results.push(wordObj);
     }
@@ -248,6 +266,8 @@ function App() {
         inventory={inventory}
         Shop={Shop}
         Board={Board}
+        timer={time}
+        multiplier={mult}
       />
       
       <div className="right">
@@ -284,8 +304,19 @@ const MidSection = ({
   setBalance,
   inventory,
   Shop,
-  Board
+  Board,
+  timer,
+  multiplier
 }) => {
+
+  const formatTime = (timeInSeconds) => {
+    const minutes = Math.floor(timeInSeconds / 60)
+      .toString()
+      .padStart(2, '0');
+    const remainingSeconds = (timeInSeconds % 60).toString().padStart(2, '0');
+    return `${minutes}:${remainingSeconds}`;
+  };
+
   return (
     <div className="mid rainbow-container">
       <div className="rainbow-background"></div>
@@ -333,6 +364,9 @@ const MidSection = ({
           </div>
           
           <div className="mid-center">
+            <div className={`timer-${timer > 5 ? "" : "low"}`}>
+              {formatTime(timer)}
+            </div>
             <Board 
               board={board} 
               userBoard={userBoard}
@@ -360,7 +394,7 @@ const MidSection = ({
               STATS
             </h1>
             <div className="points-display">
-              {points} PTS
+              {points} PTS ({multiplier}x)
             </div>
             <div className="balance-display">
               ${balance}
@@ -469,17 +503,6 @@ const BuyItem = ({ item, inv, bal, setInShop, setBalance }) => {
 
 const Shop = ({ inventory, balance, setBalance, setInShop }) => {
   const [selectedItem, setSelectedItem] = useState(null);
-  const dialogues = [
-    "HRT? Havent heard that name in a long time...",
-    "Hi -__-",
-    "buy something.."
-  ];
-
-  const poorDialogues = [
-    "you're broke :I",
-
-  ]
-
   const shopItems = [...ITEMS];
 
   const handleSelectItem = (item) => {
