@@ -27,6 +27,7 @@ function App() {
   const [time, setTime] = useState(30); //seconds 
   const [mult, setMult] = useState(1);
 
+  const [modifiers, setModifiers] = useState([]);
 
   useEffect(() => {
     if (!db) return;
@@ -264,6 +265,7 @@ function App() {
         balance={balance}
         setBalance={setBalance}
         inventory={inventory}
+        setInventory={setInventory}
         Shop={Shop}
         Board={Board}
         timer={time}
@@ -271,7 +273,10 @@ function App() {
       />
       
       <div className="right">
-        <RightMenu />
+        <RightMenu 
+          inventory={inventory}
+          setInventory={setInventory}
+        />
       </div>
     </div>
   );
@@ -306,7 +311,8 @@ const MidSection = ({
   Shop,
   Board,
   timer,
-  multiplier
+  multiplier,
+  setInventory
 }) => {
 
   const formatTime = (timeInSeconds) => {
@@ -407,6 +413,7 @@ const MidSection = ({
           balance={balance}
           setBalance={setBalance}
           setInShop={setInShop}
+          setInventory={setInventory}
         />
       )}
     </div>
@@ -457,12 +464,22 @@ function LeftMenu({ onNewGame, inGame }) {
   );
 }
 
-function RightMenu() {
+function RightMenu({ inventory, setInventory }) {
+  
   return (
     <div className="right-menu">
       <div className="menu-section">
         <h2 className="section-title">ITEMS</h2>
         <div className="section-content">
+          {inventory.map(item => (
+            <>
+            <div className="item" key={item.id || item.name}>
+              <button data-tooltip={item.desc}>
+                <img src={item.img} alt={item.name} />
+              </button>
+            </div>
+            </>
+          ))}
         </div>
       </div>
       <div className="menu-section">
@@ -470,16 +487,20 @@ function RightMenu() {
         <div className="section-content">
         </div>
       </div>
+      <div className="menu-section">
+
+      </div>
     </div>
   );
 }
 
-const BuyItem = ({ item, inv, bal, setInShop, setBalance }) => {  
+const BuyItem = ({ item, inv, bal, setInShop, setBalance, setInv }) => {  
   const canBuy = bal >= item.cost;
 
   const buy = (item) => {
-    inv.push(item.content);
+    setInv(prev => [...prev, item])
     setBalance(prev => prev - item.cost);
+    console.log(inv);
   }
 
   return (
@@ -501,7 +522,7 @@ const BuyItem = ({ item, inv, bal, setInShop, setBalance }) => {
   );
 }
 
-const Shop = ({ inventory, balance, setBalance, setInShop }) => {
+const Shop = ({ inventory, balance, setBalance, setInShop, setInventory }) => {
   const [selectedItem, setSelectedItem] = useState(null);
   const shopItems = [...ITEMS];
 
@@ -533,7 +554,7 @@ const Shop = ({ inventory, balance, setBalance, setInShop }) => {
               </div>
 
               <div className="shop-list-item-details">
-                <div className="shop-list-item-name">{item.name}</div>
+                <div className="shop-list-item-name">{item.name} ({item.stock})</div>
                 <div className="shop-list-item-price">${item.cost}</div>
               </div>
             </div>
@@ -560,6 +581,7 @@ const Shop = ({ inventory, balance, setBalance, setInShop }) => {
               <BuyItem 
                 item={selectedItem}
                 inv={inventory}
+                setInv={setInventory}
                 bal={balance}
                 setBalance={setBalance}
                 setInShop={setInShop}
