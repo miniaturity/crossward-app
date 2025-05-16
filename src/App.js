@@ -11,7 +11,7 @@ function App() {
   
   const [selectedCell, setSelectedCell] = useState([]);
   const [selectedDirection, setSelectedDirection] = useState('across');
-  const [currentClue, setCurrentClue] = useState('');
+  const [currentClue, setCurrentClue] = useState('HINT');
   const [currentWord, setCurrentWord] = useState('');
   
   const [userBoard, setUserBoard] = useState([]);
@@ -28,6 +28,7 @@ function App() {
   const [mult, setMult] = useState(1);
 
   const [modifiers, setModifiers] = useState([]);
+  const [log, setLog] = useState("> ..")
 
   useEffect(() => {
     if (!db) return;
@@ -102,7 +103,7 @@ function App() {
   const handleChangePuzzle = () => {
     chooseWords();
     setSelectedCell([]);
-    setCurrentClue('');
+    setCurrentClue('HINT');
     setIncorrectCells([]);
     setCorrectCells([]);
   };
@@ -276,6 +277,7 @@ function App() {
         <RightMenu 
           inventory={inventory}
           setInventory={setInventory}
+          ci={log}
         />
       </div>
     </div>
@@ -464,7 +466,7 @@ function LeftMenu({ onNewGame, inGame }) {
   );
 }
 
-function RightMenu({ inventory, setInventory }) {
+function RightMenu({ inventory, setInventory, ci }) {
   
   return (
     <div className="right-menu">
@@ -487,8 +489,8 @@ function RightMenu({ inventory, setInventory }) {
         <div className="section-content">
         </div>
       </div>
-      <div className="menu-section">
-
+      <div className="menu-section ci">
+          {ci}
       </div>
     </div>
   );

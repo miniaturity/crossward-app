@@ -720,6 +720,13 @@ body {
   animation: title-shake 0.5s steps(2) infinite;
 }
 
+.ci {
+  background-color: black;
+  color: white;
+  padding: 5px;
+  font-size: 0.7rem;
+}
+
 @media (max-width: 1280px) {
   .shop-title {
     font-size: 1rem;
