@@ -230,6 +230,48 @@ function App() {
     return sortedWords[0]; 
   };
 
+  function findWord(targetWord, board, placedWords) {
+    const normalizedTargetWord = targetWord.toUpperCase();
+    
+    const matchingPlacedWords = placedWords.filter(wordObj => {
+      return wordObj.word && wordObj.word.toUpperCase() === normalizedTargetWord;
+    });
+    
+
+    if (matchingPlacedWords.length === 0) {
+      console.warn(`Warning: Word "${targetWord}" not found in placed words.`);
+      return [];
+    }
+    
+    const allPositions = [];
+    
+    for (const placedWord of matchingPlacedWords) {
+      const { row, col, isHorizontal, word } = placedWord;
+      
+      const positions = [];
+      for (let i = 0; i < word.length; i++) {
+        if (isHorizontal) {
+          positions.push([row, col + i]);
+        } else {
+          positions.push([row + i, col]);
+        }
+      }
+      
+      const isValid = positions.every(([r, c], index) => {
+        return r >= 0 && r < board.length && 
+              c >= 0 && c < board[0].length && 
+              board[r][c] !== '-' && 
+              (board[r][c] === word[index] || !board[r][c]); 
+      });
+      
+      if (isValid) {
+        allPositions.push(positions);
+      }
+    }
+    
+    return allPositions.length > 0 ? allPositions[0] : [];
+  }
+
   return (
     <div className="page">
       <div className="left">
@@ -278,6 +320,7 @@ function App() {
           inventory={inventory}
           setInventory={setInventory}
           ci={log}
+          setCi={setLog}
         />
       </div>
     </div>
@@ -426,7 +469,6 @@ function LeftMenu({ onNewGame, inGame }) {
   const [visibleButtons, setVisibleButtons] = useState(0);
   
   useEffect(() => {
-    
     let buttonCount = 0;
     const menuButtons = ["New Game", "Settings", "Credits"];
     
@@ -466,18 +508,73 @@ function LeftMenu({ onNewGame, inGame }) {
   );
 }
 
-function RightMenu({ inventory, setInventory, ci }) {
+
+const effectsList = () => {
+  const slow = ({amt, setTime}) => {
+    setTime(prev => prev + amt);
+  }
+
+  const scramble = ({word, setUserBoard, userBoard, findWord}) => {
+    
+    function shuffle(str) {
+      strArray = Array.from(str);
+      for (let i = 0; i < strArray.length - 1; ++i) {
+          let j = Math.floor(Math.random() * strArray.length);
+          let temp = strArray[i];
+          strArray[i] = strArray[j];
+          strArray[j] = temp;
+      }
+      return strArray.join("");
+    }
+
+    const shuffledWord = shuffle(word);
+    const wordPositions = findWord(word);
+
+  }
+
+  return (
+    {
+      slow,
+
+    }
+  )
+}
+
+
+
+
+function CreateEffect({ effect, mod, setters, states }) {
+  const effects = effectsList;
+
+
+}
+
+
+function RightMenu({ inventory, setInventory, ci, setCi }) {
   
+  const consumeItem = (item) => {
+    const itMsg = item.msg;
+    setCi(`> ${itMsg}`);
+    removeItem(item);
+  }
+
+  const removeItem = (item) => {
+    const temp = [...inventory];
+    temp.splice(item, 1);
+    setInventory(temp);
+  }
+
   return (
     <div className="right-menu">
-      <div className="menu-section">
+      <div className="menu-section"> 
         <h2 className="section-title">ITEMS</h2>
         <div className="section-content">
-          {inventory.map(item => (
+          {inventory.map((item, index) => (
             <>
-            <div className="item" key={item.id || item.name}>
-              <button data-tooltip={item.desc}>
+            <div className="item" key={index}>
+              <button onClick={() => {consumeItem(item)}}>
                 <img src={item.img} alt={item.name} />
+                <p>{item.name}</p>
               </button>
             </div>
             </>
@@ -542,7 +639,7 @@ const Shop = ({ inventory, balance, setBalance, setInShop, setInventory }) => {
   return (
    <div className="shop-container">
       <div className="shop-items-list">
-        <div className="shop-title"> <h2>Shop Items <strong>[${balance}]</strong></h2></div>
+        <div className="shop-title"> <h2>Shop <strong>[${balance}]</strong></h2></div>
         <div className="items-scroll-container">
           {shopItems.map((item, index) => (
             <div 
