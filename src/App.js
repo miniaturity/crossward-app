@@ -12,7 +12,7 @@ function App() {
   const [selectedCell, setSelectedCell] = useState([]);
   const [selectedDirection, setSelectedDirection] = useState('across');
   const [currentClue, setCurrentClue] = useState('HINT');
-  const [currentWord, setCurrentWord] = useState('');
+  const [currentWordState, setCurrentWordState] = useState('');
   
   const [userBoard, setUserBoard] = useState([]);
   const [incorrectCells, setIncorrectCells] = useState([]);
@@ -28,7 +28,11 @@ function App() {
   const [mult, setMult] = useState(1);
 
   const [modifiers, setModifiers] = useState([]);
-  const [log, setLog] = useState("> ..")
+  const [log, setLog] = useState("> ..");
+  const [reward, setReward] = useState(0);
+
+  const [rewardChance, setRewardChance] = useState(7); // 3/10 chance (10 - 7)
+
 
   useEffect(() => {
     if (!db) return;
@@ -59,7 +63,7 @@ function App() {
     if (word) {
       const directionSymbol = word.isHorizontal ? 'A' : 'D';
       setCurrentClue(`${word.clueNumber}${directionSymbol}. ${word.clue}`);
-      setCurrentWord(word.word);
+      setCurrentWordState(word.word);
     }
   }, [selectedCell, selectedDirection, placedWords]);
 
@@ -109,7 +113,7 @@ function App() {
   };
   
   const handleCheckPuzzle = () => {
-    const newIncorrectCells = [];
+    const newIncorrectCells = []; 
     const newCorrectCells = [];
     
     for (let row = 0; row < board.length; row++) {
@@ -133,7 +137,7 @@ function App() {
   const handleCheckWord = () => {
     if (selectedCell.length === 0) return;
 
-    const isMoneyWord = getRandomIntInclusive(1, 10);
+    const giveReward = getRandomIntInclusive(1, 10);
   
     const [row, col] = selectedCell;
     const currentWord = findWordAtPosition(row, col, selectedDirection);
@@ -180,8 +184,8 @@ function App() {
     setCorrectCells(newCorrectCells);
     
     if (allCellsCorrect && currentWord) {
-      if (isMoneyWord > 7) setBalance(prev => prev + Math.floor(currentWord.word.length / 2))
-      setPoints(prev => prev + currentWord.word.length);
+      if (giveReward > rewardChance) setBalance(prev => prev + reward)
+      setPoints(prev => prev + (currentWord.word.length * mult));
     }
   };
   
@@ -510,43 +514,62 @@ function LeftMenu({ onNewGame, inGame }) {
 
 
 const effectsList = () => {
-  const slow = ({amt, setTime}) => {
-    setTime(prev => prev + amt);
-  }
-
-  const scramble = ({word, setUserBoard, userBoard, findWord}) => {
-    
-    function shuffle(str) {
-      strArray = Array.from(str);
-      for (let i = 0; i < strArray.length - 1; ++i) {
-          let j = Math.floor(Math.random() * strArray.length);
-          let temp = strArray[i];
-          strArray[i] = strArray[j];
-          strArray[j] = temp;
+  return {
+    slow: {
+      requires: ["setTime"],
+      apply: ({amt, setTime}) => {
+        setTime(prev => prev + amt);
       }
-      return strArray.join("");
+    },
+    money: {
+      requires: ["setReward"],
+      apply: ({amt, setReward}) => {
+        setReward(prev => prev + amt);
+      }
+    },
+  };
+};
+
+function createMods({ mods = [], setters = {} }) {
+  const effects = effectsList();
+  const results = {};
+
+  mods.forEach((mod, index) => {
+    const { effect, ...params } = mod;
+    const effectName = effect || "unknown";
+    const effectId = `${effectName}_${index}`;
+    
+    if (!effects[effectName]) {
+      results[effectId] = { success: false, message: `Effect "${effectName}" does not exist` };
+      return;
     }
-
-    const shuffledWord = shuffle(word);
-    const wordPositions = findWord(word);
-
-  }
-
-  return (
-    {
-      slow,
-
+    
+    const missingSetters = effects[effectName].requires.filter(setter => !setters[setter]);
+    if (missingSetters.length > 0) {
+      results[effectId] = { 
+        success: false, 
+        message: `Missing required setters: ${missingSetters.join(', ')}` 
+      };
+      return;
     }
-  )
-}
-
-
-
-
-function CreateEffect({ effect, mod, setters, states }) {
-  const effects = effectsList;
-
-
+    
+    try {
+      const requiredSetters = {};
+      effects[effectName].requires.forEach(setter => {
+        requiredSetters[setter] = setters[setter];
+      });
+      
+      effects[effectName].apply({ ...params, ...requiredSetters });
+      results[effectId] = { success: true };
+    } catch (error) {
+      results[effectId] = { 
+        success: false, 
+        message: `Error applying effect: ${error.message}` 
+      };
+    }
+  });
+  
+  return results;
 }
 
 
