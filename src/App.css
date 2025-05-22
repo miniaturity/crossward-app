@@ -252,6 +252,13 @@ body {
   text-align: center;
 }
 
+.streak-display {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #ffffff;
+  text-align: center;
+}
+
 .crossword-container {
   display: flex;
   flex-direction: column;

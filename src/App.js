@@ -32,6 +32,22 @@ function App() {
   const [reward, setReward] = useState(0);
 
   const [rewardChance, setRewardChance] = useState(7); // 3/10 chance (10 - 7)
+  const [streak, setStreak] = useState(0);
+  const [streakCol, setStreakCol] = useState("#ffffff");
+
+  const setters = {
+    setPoints,
+    setBalance,
+    setInventory,
+    setInShop,
+    setTime,
+    setMult,
+    setModifiers,
+    setLog,
+    setReward,
+    setRewardChance,
+    setStreak
+  }
 
 
   useEffect(() => {
@@ -186,6 +202,9 @@ function App() {
     if (allCellsCorrect && currentWord) {
       if (giveReward > rewardChance) setBalance(prev => prev + reward)
       setPoints(prev => prev + (currentWord.word.length * mult));
+      setStreak(prev => prev + 1);
+    } else {
+      setStreak(0);
     }
   };
   
@@ -317,6 +336,10 @@ function App() {
         Board={Board}
         timer={time}
         multiplier={mult}
+        setTime={setTime}
+        setMult={setMult}
+        streak={streak}
+        streakCol={streakCol}
       />
       
       <div className="right">
@@ -325,6 +348,7 @@ function App() {
           setInventory={setInventory}
           ci={log}
           setCi={setLog}
+          setters={setters}
         />
       </div>
     </div>
@@ -360,8 +384,12 @@ const MidSection = ({
   Shop,
   Board,
   timer,
+  setTime,
   multiplier,
-  setInventory
+  setMult,
+  setInventory,
+  streak,
+  streakCol
 }) => {
 
   const formatTime = (timeInSeconds) => {
@@ -415,6 +443,31 @@ const MidSection = ({
                 >
                   Solve Puzzle
                 </button>
+                <button
+                  className="crossword-button"
+                  onClick={() => {console.log(CreateMods({
+                    mods: [
+                      { effect: "slow", mod: 30 },
+                    
+                    ],
+                    setters: { setTime }
+                  }))}}
+                >
+                  Time Test
+                </button>
+                <button
+                  className="crossword-button"
+                  onClick={() => {console.log(CreateMods(
+                    {
+                      mods: [
+                        { effect: "multAdd", mod: 1 },
+                      ],
+                      setters: { setMult }
+                    }
+                  ))}}
+                >
+                  Mult Test
+                </button>
             </div>
           </div>
           
@@ -453,6 +506,13 @@ const MidSection = ({
             </div>
             <div className="balance-display">
               ${balance}
+            </div>
+            <div className="streak-display"
+              style={{
+                  color: {streakCol}
+              }}
+            >
+                {streak} STREAK
             </div>
           </div>
         </>
@@ -517,20 +577,34 @@ const effectsList = () => {
   return {
     slow: {
       requires: ["setTime"],
-      apply: ({amt, setTime}) => {
-        setTime(prev => prev + amt);
+      apply: ({mod, setTime}) => {
+        setTime(prev => prev + mod);
+        console.log(mod);
       }
     },
-    money: {
-      requires: ["setReward"],
-      apply: ({amt, setReward}) => {
-        setReward(prev => prev + amt);
+    reward: {
+      requires: ["setReward", "setRewardChance"],
+      apply: ({mod, setReward, setRewardChance}) => {
+        setRewardChance(-1);
+        setReward(prev => prev + mod);
       }
     },
+    rewardChance: {
+      requires: ["setRewardChance"],
+      apply: ({mod, setRewardChance}) => {
+        setRewardChance(mod);
+      }
+    },
+    multAdd: {
+      requires: ["setMult"],
+      apply: ({mod, setMult}) => {
+        setMult(prev => prev + mod);
+      }
+    }
   };
 };
 
-function createMods({ mods = [], setters = {} }) {
+function CreateMods({ mods = [], setters = {} }) {
   const effects = effectsList();
   const results = {};
 
@@ -572,12 +646,27 @@ function createMods({ mods = [], setters = {} }) {
   return results;
 }
 
-
-function RightMenu({ inventory, setInventory, ci, setCi }) {
+// setters: obj with all the setters
+function RightMenu({ inventory, setInventory, ci, setCi, setters }) {
   
   const consumeItem = (item) => {
     const itMsg = item.msg;
     setCi(`> ${itMsg}`);
+
+    const effects = item.content.split("_");
+    let mods = [];
+  
+    for (let i = 0; i < effects.length; i++) {
+      if (effects[i].split("-")[0] === "na") continue;
+
+      mods.push({effect: effects[i].split("-")[0], mod: parseInt(effects[i].split("-")[1])});
+    }
+
+    console.log(CreateMods({
+      mods: mods,
+      setters: setters
+    }))
+
     removeItem(item);
   }
 
@@ -593,14 +682,12 @@ function RightMenu({ inventory, setInventory, ci, setCi }) {
         <h2 className="section-title">ITEMS</h2>
         <div className="section-content">
           {inventory.map((item, index) => (
-            <>
             <div className="item" key={index}>
               <button onClick={() => {consumeItem(item)}}>
                 <img src={item.img} alt={item.name} />
                 <p>{item.name}</p>
               </button>
             </div>
-            </>
           ))}
         </div>
       </div>
