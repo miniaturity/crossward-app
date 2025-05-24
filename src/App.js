@@ -28,7 +28,6 @@ function App() {
   const [mult, setMult] = useState(1);
 
   const [modifiers, setModifiers] = useState([]);
-  const [log, setLog] = useState("> ..");
   const [reward, setReward] = useState(6);
 
   const [rewardChance, setRewardChance] = useState(7); // 3/10 chance (10 - 7)
@@ -38,6 +37,8 @@ function App() {
   const [streakMult, setStreakMult] = useState(1.0);
   const [correctWords, setCorrectWords] = useState([]);
   const [dialogue, setDialogue] = useState("");
+  
+  const [dialogueImg, setDialogueImg] = useState("");
 
   const setters = {
     setPoints,
@@ -47,10 +48,10 @@ function App() {
     setTime,
     setMult,
     setModifiers,
-    setLog,
     setReward,
     setRewardChance,
-    setStreak
+    setStreak,
+    setDialogue
   }
 
   useEffect(() => {
@@ -397,8 +398,6 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
         <RightMenu 
           inventory={inventory}
           setInventory={setInventory}
-          ci={log}
-          setCi={setLog}
           setters={setters}
         />
       </div>
@@ -406,8 +405,9 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
   );
 }
 
-function DialogueBox({ dialogue }) {
+function DialogueBox({ dialogue, img }) {
   const [currDialogue, setCurrDialogue] = useState("")
+  const timeoutId = useRef(null);
 
    useEffect(() => {
     setCurrDialogue("");
@@ -422,16 +422,25 @@ function DialogueBox({ dialogue }) {
       index++;
       
       if (index >= dialogue.length) {
+        timeoutId.current = setTimeout(() => {
+          setCurrDialogue("");
+        }, 2000);
         clearInterval(typewriterInterval);
       }
     }, 50); 
 
-    return () => clearInterval(typewriterInterval);
+
+
+    return () => {
+      clearInterval(typewriterInterval); 
+      clearTimeout(timeoutId.current);
+    }
   }, [dialogue]);
 
   return (
     <>
       {currDialogue !== "" ? <div className="dialogue">
+        <img src={img} alt="na"/>
         <p>{currDialogue}</p>
       </div> : <div className="dialogue hidden"> asd </div>}
     </>
@@ -588,7 +597,9 @@ const MidSection = ({
               onSolvePuzzle={handleSolvePuzzle}
               inGame={inGame}
             />
-            <DialogueBox />
+            <DialogueBox 
+              dialogue={dialogue}
+            />
           </div>
 
           
@@ -755,11 +766,12 @@ function CreateMods({ mods = [], setters = {} }) {
 }
 
 // setters: obj with all the setters
-function RightMenu({ inventory, setInventory, ci, setCi, setters }) {
+function RightMenu({ inventory, setInventory, setters }) {
   
   const consumeItem = (item) => {
     const itMsg = item.msg;
-    setCi(`> ${itMsg}`);
+    setters.setDialogue(itMsg);
+
 
     const effects = item.content.split("_");
     let mods = [];
@@ -804,9 +816,6 @@ function RightMenu({ inventory, setInventory, ci, setCi, setters }) {
         <h2 className="section-title">MODIFIERS</h2>
         <div className="section-content">
         </div>
-      </div>
-      <div className="menu-section ci">
-          {ci}
       </div>
     </div>
   );
