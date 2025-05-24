@@ -29,11 +29,14 @@ function App() {
 
   const [modifiers, setModifiers] = useState([]);
   const [log, setLog] = useState("> ..");
-  const [reward, setReward] = useState(0);
+  const [reward, setReward] = useState(4);
 
   const [rewardChance, setRewardChance] = useState(7); // 3/10 chance (10 - 7)
   const [streak, setStreak] = useState(0);
-  const [streakCol, setStreakCol] = useState("#ffffff");
+  const [streakCol, setStreakCol] = useState("");
+
+  const [streakMult, setStreakMult] = useState(1.0);
+  const [correctWords, setCorrectWords] = useState([]);
 
   const setters = {
     setPoints,
@@ -48,6 +51,13 @@ function App() {
     setRewardChance,
     setStreak
   }
+
+  useEffect(() => {
+    setStreakCol(streak >= 50 ? "streak-50" : streak >= 15 ? "streak-15" : streak >= 5 ? "streak-5" : "");
+    setStreakMult(streak >= 50 ? 1.5 : streak >= 15 ? 1.2 : streak >= 5 ? 1.1 : 1)
+    setReward(4);
+    setRewardChance(7);
+  }, [streak])
 
 
   useEffect(() => {
@@ -199,11 +209,17 @@ function App() {
     setIncorrectCells(newIncorrectCells);
     setCorrectCells(newCorrectCells);
     
-    if (allCellsCorrect && currentWord) {
-      if (giveReward > rewardChance) setBalance(prev => prev + reward)
-      setPoints(prev => prev + (currentWord.word.length * mult));
+    if (allCellsCorrect && currentWord && !correctWords.includes(currentWord.word)) {
+      const newCorrectWords = [...correctWords];
+      newCorrectWords.push(currentWord.word);
+      if (giveReward > rewardChance) {
+        setBalance(prev => prev + reward)
+        console.log(reward);
+      }
+      setPoints(prev => prev + (Math.ceil((currentWord.word.length * streakMult) * mult)));
       setStreak(prev => prev + 1);
-    } else {
+      setCorrectWords(newCorrectWords);
+    } else if (!allCellsCorrect) {
       setStreak(0);
     }
   };
@@ -339,7 +355,9 @@ function App() {
         setTime={setTime}
         setMult={setMult}
         streak={streak}
+        setStreak={setStreak}
         streakCol={streakCol}
+        streakMult={streakMult}
       />
       
       <div className="right">
@@ -389,7 +407,9 @@ const MidSection = ({
   setMult,
   setInventory,
   streak,
-  streakCol
+  setStreak,
+  streakCol,
+  streakMult
 }) => {
 
   const formatTime = (timeInSeconds) => {
@@ -468,6 +488,12 @@ const MidSection = ({
                 >
                   Mult Test
                 </button>
+                <button
+                  className="crossword-button"
+                  onClick={() => {setStreak(prev => prev + 1)}}
+                >
+                  Streak Test
+                </button>
             </div>
           </div>
           
@@ -507,12 +533,13 @@ const MidSection = ({
             <div className="balance-display">
               ${balance}
             </div>
-            <div className="streak-display"
+            <div className={`streak-display ${streak !== 0 ? 'streak-update' : ''} ${streakCol}`}
+
               style={{
                   color: {streakCol}
               }}
             >
-                {streak} STREAK
+                {streak} STREAK ({streakMult}x)
             </div>
           </div>
         </>
@@ -703,13 +730,22 @@ function RightMenu({ inventory, setInventory, ci, setCi, setters }) {
   );
 }
 
-const BuyItem = ({ item, inv, bal, setInShop, setBalance, setInv }) => {  
-  const canBuy = bal >= item.cost;
+const BuyItem = ({ item, inv, bal, setInShop, setBalance, setInv, id }) => {  
+  const [canBuyMap, setCanBuyMap] = useState({});
+
+  const canBuy = canBuyMap[item.id] !== false && bal >= item.cost && item.stock > 0;
 
   const buy = (item) => {
+    if (!canBuy) return;
+    
+    if (item.cost > bal || item.stock <= 0) {
+      setCanBuyMap(prev => ({...prev, [item.id]: false}));
+      return;
+    }
+    
+    item.stock -= 1;
     setInv(prev => [...prev, item])
     setBalance(prev => prev - item.cost);
-    console.log(inv);
   }
 
   return (
@@ -718,6 +754,7 @@ const BuyItem = ({ item, inv, bal, setInShop, setBalance, setInv }) => {
         className="buy-button" 
         disabled={!canBuy}
         onClick={() => {buy(item)}}
+        id={id}
       >
         Buy
       </button>
@@ -794,6 +831,7 @@ const Shop = ({ inventory, balance, setBalance, setInShop, setInventory }) => {
                 bal={balance}
                 setBalance={setBalance}
                 setInShop={setInShop}
+                id={selectedItem.id}
               />
             </div>
           </>
