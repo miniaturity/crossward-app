@@ -14,7 +14,7 @@ function App() {
   const [currentClue, setCurrentClue] = useState('HINT');
   const [currentWordState, setCurrentWordState] = useState('');
   
-  const [userBoard, setUserBoard] = useState([]);
+  const [userBoard, setUserBoard] = useState([[]]);
   const [incorrectCells, setIncorrectCells] = useState([]);
   const [correctCells, setCorrectCells] = useState([]);
   const [inGame, setInGame] = useState(false);
@@ -29,7 +29,7 @@ function App() {
 
   const [modifiers, setModifiers] = useState([]);
   const [log, setLog] = useState("> ..");
-  const [reward, setReward] = useState(4);
+  const [reward, setReward] = useState(6);
 
   const [rewardChance, setRewardChance] = useState(7); // 3/10 chance (10 - 7)
   const [streak, setStreak] = useState(0);
@@ -37,6 +37,7 @@ function App() {
 
   const [streakMult, setStreakMult] = useState(1.0);
   const [correctWords, setCorrectWords] = useState([]);
+  const [dialogue, setDialogue] = useState("");
 
   const setters = {
     setPoints,
@@ -104,6 +105,10 @@ function App() {
       setTime((prevSeconds) => {
         if (prevSeconds <= 0) {
           handleChangePuzzle();
+          if (correctWords.length === 0) {
+            setStreak(0); 
+            setMult(1);
+          }
           return 30;
         }
         return prevSeconds - 1;
@@ -136,9 +141,11 @@ function App() {
     setCurrentClue('HINT');
     setIncorrectCells([]);
     setCorrectCells([]);
+    setCorrectWords([]);
   };
   
-  const handleCheckPuzzle = () => {
+const handleCheckPuzzle = (x, customUserBoard = null) => {
+    const currentUserBoard = customUserBoard || userBoard;
     const newIncorrectCells = []; 
     const newCorrectCells = [];
     
@@ -146,8 +153,8 @@ function App() {
       for (let col = 0; col < board[0].length; col++) {
         if (board[row][col] === '-') continue;
         
-        if (userBoard[row][col]) {
-          if (userBoard[row][col] !== board[row][col]) {
+        if (currentUserBoard[row][col]) {
+          if (currentUserBoard[row][col] !== board[row][col]) {
             newIncorrectCells.push([row, col]);
           } else {
             newCorrectCells.push([row, col]);
@@ -156,9 +163,16 @@ function App() {
       }
     }
     
-    setIncorrectCells(newIncorrectCells);
-    setCorrectCells(newCorrectCells);
-  };
+    if (x) { 
+      setIncorrectCells(newIncorrectCells);
+      setCorrectCells(newCorrectCells); 
+      console.log("checked")
+    }
+
+    if (correctWords.length + 1 === placedWords.length) return true;
+    return false;
+};
+
 
   const handleCheckWord = () => {
     if (selectedCell.length === 0) return;
@@ -219,14 +233,31 @@ function App() {
       setPoints(prev => prev + (Math.ceil((currentWord.word.length * streakMult) * mult)));
       setStreak(prev => prev + 1);
       setCorrectWords(newCorrectWords);
+      if (handleCheckPuzzle(false)) {
+        setPoints(prev => prev + (Math.ceil(((20 * correctWords.length) * streakMult) * mult)));
+        setBalance(prev => prev + (reward * mult));
+      }
     } else if (!allCellsCorrect) {
       setStreak(0);
     }
+
+
   };
+
+
   
   const handleSolvePuzzle = () => {
     const solvedBoard = board.map(row => [...row]);
     setUserBoard(solvedBoard);
+
+    let sum = 0;
+    for (let i = 0; i < placedWords.length; i++)
+      sum += placedWords[i].word.length;
+
+    setPoints(prev => prev + (Math.ceil((sum * streakMult) * mult)));
+    setStreak(prev => prev + 1)
+    setCorrectWords(placedWords);
+    handleCheckPuzzle(true, solvedBoard);
     setIncorrectCells([]);
   };
 
@@ -358,6 +389,8 @@ function App() {
         setStreak={setStreak}
         streakCol={streakCol}
         streakMult={streakMult}
+        dialogue={dialogue}
+        setDialogue={setDialogue}
       />
       
       <div className="right">
@@ -371,6 +404,38 @@ function App() {
       </div>
     </div>
   );
+}
+
+function DialogueBox({ dialogue }) {
+  const [currDialogue, setCurrDialogue] = useState("")
+
+   useEffect(() => {
+    setCurrDialogue("");
+    
+    if (!dialogue || dialogue.length === 0) {
+      return;
+    }
+
+    let index = 0;
+    const typewriterInterval = setInterval(() => {
+      setCurrDialogue(dialogue.slice(0, index + 1));
+      index++;
+      
+      if (index >= dialogue.length) {
+        clearInterval(typewriterInterval);
+      }
+    }, 50); 
+
+    return () => clearInterval(typewriterInterval);
+  }, [dialogue]);
+
+  return (
+    <>
+      {currDialogue !== "" ? <div className="dialogue">
+        <p>{currDialogue}</p>
+      </div> : <div className="dialogue hidden"> asd </div>}
+    </>
+  )
 }
 
 const MidSection = ({ 
@@ -409,7 +474,9 @@ const MidSection = ({
   streak,
   setStreak,
   streakCol,
-  streakMult
+  streakMult,
+  dialogue,
+  setDialogue
 }) => {
 
   const formatTime = (timeInSeconds) => {
@@ -521,7 +588,9 @@ const MidSection = ({
               onSolvePuzzle={handleSolvePuzzle}
               inGame={inGame}
             />
+            <DialogueBox />
           </div>
+
           
           <div className="mid-right text-3d-right">
             <h1 className="display-title">
@@ -530,18 +599,18 @@ const MidSection = ({
             <div className="points-display">
               {points} PTS ({multiplier}x)
             </div>
-            <div className="balance-display">
-              ${balance}
-            </div>
             <div className={`streak-display ${streak !== 0 ? 'streak-update' : ''} ${streakCol}`}
-
               style={{
                   color: {streakCol}
               }}
             >
                 {streak} STREAK ({streakMult}x)
             </div>
+            <div className="balance-display">
+              ${balance}
+            </div>
           </div>
+
         </>
       ) : (
         <Shop 
@@ -627,6 +696,18 @@ const effectsList = () => {
       apply: ({mod, setMult}) => {
         setMult(prev => prev + mod);
       }
+    },
+    multSet: {
+      requires: ["setMult"],
+      apply: ({mod, setMult}) => {
+        setMult(mod);
+      }
+    },
+    solvePuzzle: {
+      requires: ["handleSolvePuzzle"],
+      apply: ({handleSolvePuzzle}) => {
+        handleSolvePuzzle(true);
+      }
     }
   };
 };
@@ -687,6 +768,7 @@ function RightMenu({ inventory, setInventory, ci, setCi, setters }) {
       if (effects[i].split("-")[0] === "na") continue;
 
       mods.push({effect: effects[i].split("-")[0], mod: parseInt(effects[i].split("-")[1])});
+      console.log(`mod ${i} pushed (${item})`)
     }
 
     console.log(CreateMods({
@@ -711,7 +793,7 @@ function RightMenu({ inventory, setInventory, ci, setCi, setters }) {
           {inventory.map((item, index) => (
             <div className="item" key={index}>
               <button onClick={() => {consumeItem(item)}}>
-                <img src={item.img} alt={item.name} />
+                <img src={item.img} alt={item.name}></img>
                 <p>{item.name}</p>
               </button>
             </div>

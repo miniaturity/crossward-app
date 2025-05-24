@@ -6,7 +6,7 @@ export const ITEMS = [
         content: "slow-5",
         msg: "You drank the root beer, time slowed down!",
         desc: "Slows down time. (+5s)",
-        cost: 8,
+        cost: 3,
         stock: 5
     },
     {
@@ -33,10 +33,20 @@ export const ITEMS = [
         id: 4,
         name: "joker card",
         img: "assets/jovial.png",
-        content: "slow-60_setMult-1",
+        content: "slow-60_multSet-1",
         msg: "You played the Joker Card, time slowed down!",
         desc: "Slows down time, resets all mults. (+60s, 1x)",
         cost: 30,
         stock: 2
     },
+    {
+        id: 5,
+        name: "dictionary",
+        img: "assets/jovial.png",
+        content: "solvePuzzle-na",
+        msg: "You used the dictionary!",
+        desc: "Solves the current crossword",
+        cost: 100,
+        stock: 1
+    }
 ]
