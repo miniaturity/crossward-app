@@ -399,6 +399,8 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
           inventory={inventory}
           setInventory={setInventory}
           setters={setters}
+          modifiers={modifiers}
+          setModifiers={setModifiers}
         />
       </div>
     </div>
@@ -679,26 +681,67 @@ function LeftMenu({ onNewGame, inGame }) {
   );
 }
 
+// mod is a obj!
+const AddMod = ({mod, modifiers, setModifiers}) => {
+  console.log("trying!")
 
-const effectsList = () => {
+  console.log(mod);
+
+  const newObj = {
+    img: mod.img,
+    name: mod.name,
+    timer: mod.time,
+    amt: mod.amt
+  }
+  setModifiers(prev => [...prev, newObj])
+}
+
+
+const effectsList = ({modifiers, setModifiers}) => {
+  const imgs = {
+    slow: "assets/jovial.png",
+    reward: "assets/jovial.png",
+    rewardChance: "assets/jovial.png",
+  }
+  
+
   return {
     slow: {
       requires: ["setTime"],
       apply: ({mod, setTime}) => {
+        const modObj = {
+          name: "slow",
+          img: imgs.slow,
+          timer: 5,
+          amt: null,
+        }
         setTime(prev => prev + mod);
-        console.log(mod);
+        AddMod({mod: modObj, modifiers: modifiers, setModifiers: setModifiers})
       }
     },
     reward: {
       requires: ["setReward", "setRewardChance"],
       apply: ({mod, setReward, setRewardChance}) => {
+         const modObj = {
+          name: "reward",
+          img: imgs.reward,
+          timer: null,
+          amt: mod,
+        }
         setRewardChance(-1);
-        setReward(prev => prev + mod);
+        setReward(mod);
+        AddMod(modObj, modifiers, setModifiers)
       }
     },
     rewardChance: {
       requires: ["setRewardChance"],
       apply: ({mod, setRewardChance}) => {
+         const modObj = {
+          name: "rewardChance",
+          img: imgs.rewardChance,
+          timer: null,
+          amt: mod,
+        }
         setRewardChance(mod);
       }
     },
@@ -723,8 +766,8 @@ const effectsList = () => {
   };
 };
 
-function CreateMods({ mods = [], setters = {} }) {
-  const effects = effectsList();
+function CreateMods({ mods = [], setters = {}, modifiers, setModifiers }) {
+  const effects = effectsList({modifiers, setModifiers});
   const results = {};
 
   mods.forEach((mod, index) => {
@@ -766,8 +809,21 @@ function CreateMods({ mods = [], setters = {} }) {
 }
 
 // setters: obj with all the setters
-function RightMenu({ inventory, setInventory, setters }) {
+function RightMenu({ inventory, setInventory, setters, modifiers, setModifiers }) {
   
+  useEffect(() => {
+  const interval = setInterval(() => {
+    setModifiers(prev => 
+      prev.map(mod => ({
+        ...mod,
+        timer: mod.timer > 0 ? mod.timer - 1 : 0
+      })).filter(mod => mod.timer > 0)
+    );
+  }, 1000);
+
+  return () => clearInterval(interval);
+}, []);
+
   const consumeItem = (item) => {
     const itMsg = item.msg;
     setters.setDialogue(itMsg);
@@ -785,7 +841,9 @@ function RightMenu({ inventory, setInventory, setters }) {
 
     console.log(CreateMods({
       mods: mods,
-      setters: setters
+      setters: setters,
+      modifiers: modifiers,
+      setModifiers: setModifiers
     }))
 
     removeItem(item);
@@ -815,6 +873,12 @@ function RightMenu({ inventory, setInventory, setters }) {
       <div className="menu-section">
         <h2 className="section-title">MODIFIERS</h2>
         <div className="section-content">
+          {modifiers.map((mod, index) => (
+            <div className="item" key={index}>
+              <img src={mod.img} alt={mod.name}></img>
+              <p>{mod.name} | {mod.amt !== null ? mod.amt : "-"} | {mod.timer}</p>
+            </div>
+          ))}
         </div>
       </div>
     </div>
