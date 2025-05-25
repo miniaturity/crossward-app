@@ -690,7 +690,7 @@ const AddMod = ({mod, modifiers, setModifiers}) => {
   const newObj = {
     img: mod.img,
     name: mod.name,
-    timer: mod.time,
+    timer: mod.timer,
     amt: mod.amt
   }
   setModifiers(prev => [...prev, newObj])
@@ -726,7 +726,7 @@ const effectsList = ({modifiers, setModifiers}) => {
           name: "reward",
           img: imgs.reward,
           timer: null,
-          amt: mod,
+          amt: `+$${mod}`,
         }
         setRewardChance(-1);
         setReward(mod);
@@ -740,7 +740,7 @@ const effectsList = ({modifiers, setModifiers}) => {
           name: "rewardChance",
           img: imgs.rewardChance,
           timer: null,
-          amt: mod,
+          amt: `${(10 - mod) * 100}%`,
         }
         setRewardChance(mod);
       }
@@ -767,7 +767,7 @@ const effectsList = ({modifiers, setModifiers}) => {
 };
 
 function CreateMods({ mods = [], setters = {}, modifiers, setModifiers }) {
-  const effects = effectsList({modifiers, setModifiers});
+  const effects = effectsList({modifiers: modifiers, setModifiers: setModifiers});
   const results = {};
 
   mods.forEach((mod, index) => {
@@ -875,8 +875,10 @@ function RightMenu({ inventory, setInventory, setters, modifiers, setModifiers }
         <div className="section-content">
           {modifiers.map((mod, index) => (
             <div className="item" key={index}>
-              <img src={mod.img} alt={mod.name}></img>
-              <p>{mod.name} | {mod.amt !== null ? mod.amt : "-"} | {mod.timer}</p>
+              <button>
+                <img src={mod.img} alt={mod.name}></img>
+                <p>{mod.name} | {mod.amt !== null ? mod.amt : ""}{mod.timer && mod.amt ? " | " : ""}{mod.timer !== null ? mod.timer : ""}</p>
+              </button>
             </div>
           ))}
         </div>
