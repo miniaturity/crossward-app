@@ -1,5 +1,5 @@
 import './App.css';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo, useCallback } from 'react';
 import useWordDB from './WordDB';
 import { ITEMS } from './items';
 
@@ -40,19 +40,6 @@ function App() {
   
   const [dialogueImg, setDialogueImg] = useState("");
 
-  const setters = {
-    setPoints,
-    setBalance,
-    setInventory,
-    setInShop,
-    setTime,
-    setMult,
-    setModifiers,
-    setReward,
-    setRewardChance,
-    setStreak,
-    setDialogue
-  }
 
   useEffect(() => {
     setStreakCol(streak >= 50 ? "streak-50" : streak >= 15 ? "streak-15" : streak >= 5 ? "streak-5" : "");
@@ -143,6 +130,7 @@ function App() {
     setIncorrectCells([]);
     setCorrectCells([]);
     setCorrectWords([]);
+    setModifiers(prev => prev.filter(mod => mod.timer !== null))
   };
   
 const handleCheckPuzzle = (x, customUserBoard = null) => {
@@ -237,6 +225,7 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
       if (handleCheckPuzzle(false)) {
         setPoints(prev => prev + (Math.ceil(((20 * correctWords.length) * streakMult) * mult)));
         setBalance(prev => prev + (reward * mult));
+        handleChangePuzzle();
       }
     } else if (!allCellsCorrect) {
       setStreak(0);
@@ -260,6 +249,7 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
     setCorrectWords(placedWords);
     handleCheckPuzzle(true, solvedBoard);
     setIncorrectCells([]);
+    setTimeout(() => handleChangePuzzle(), 1000);
   };
 
   const findWordAtPosition = (row, col, direction) => {
@@ -341,6 +331,21 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
     }
     
     return allPositions.length > 0 ? allPositions[0] : [];
+  }
+
+    const setters = {
+    setPoints,
+    setBalance,
+    setInventory,
+    setInShop,
+    setTime,
+    setMult,
+    setModifiers,
+    setReward,
+    setRewardChance,
+    setStreak,
+    setDialogue,
+    handleSolvePuzzle,
   }
 
   return (
@@ -572,6 +577,12 @@ const MidSection = ({
                 >
                   Streak Test
                 </button>
+                <button
+                  className="crossword-button"
+                  onClick={() => {setBalance(prev => prev + 100)}}
+                >
+                  ++Dabloons Button
+                </button>
             </div>
           </div>
           
@@ -712,8 +723,9 @@ const effectsList = ({modifiers, setModifiers}) => {
         const modObj = {
           name: "slow",
           img: imgs.slow,
-          timer: 5,
+          timer: null,
           amt: null,
+          id: Date.now()
         }
         setTime(prev => prev + mod);
         AddMod({mod: modObj, modifiers: modifiers, setModifiers: setModifiers})
@@ -727,22 +739,25 @@ const effectsList = ({modifiers, setModifiers}) => {
           img: imgs.reward,
           timer: null,
           amt: `+$${mod}`,
+          id: Date.now()
         }
         setRewardChance(-1);
         setReward(mod);
-        AddMod(modObj, modifiers, setModifiers)
+        AddMod({mod: modObj, modifiers: modifiers, setModifiers: setModifiers})
       }
     },
     rewardChance: {
       requires: ["setRewardChance"],
       apply: ({mod, setRewardChance}) => {
          const modObj = {
-          name: "rewardChance",
+          name: "▲ reward chance",
           img: imgs.rewardChance,
           timer: null,
-          amt: `${(10 - mod) * 100}%`,
+          amt: `${(10 - mod) * 10}%`,
+          id: Date.now()
         }
         setRewardChance(mod);
+        AddMod({mod: modObj, modifiers: modifiers, setModifiers: setModifiers})
       }
     },
     multAdd: {
@@ -808,21 +823,58 @@ function CreateMods({ mods = [], setters = {}, modifiers, setModifiers }) {
   return results;
 }
 
+const ModifierItem = memo(({ mod, onExpire }) => {
+  const [timeLeft, setTimeLeft] = useState(mod.timer);
+
+  useEffect(() => {
+    if (mod.timer) {
+    if (timeLeft <= 0) {
+      onExpire(mod.id);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setTimeLeft(prev => {
+        const newTime = prev - 1;
+        if (newTime <= 0 && mod.timer) {
+          setTimeout(() => onExpire(mod.id), 0);
+          return 0;
+        }
+        return newTime;
+      });
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }
+    return;
+  }, [mod.id, onExpire, timeLeft]); 
+
+
+  
+
+  useEffect(() => {
+    if (mod.timer !== timeLeft && mod.timer > 0) {
+      setTimeLeft(mod.timer);
+    }
+  }, [mod.timer]);
+
+  return (
+    <div className="item">
+      <button>
+        <img src={mod.img} alt={mod.name} />
+        <p>{mod.name} | {mod.amt !== null ? mod.amt : ""}{mod.timer && mod.amt ? " | " : ""}{mod.timer !== null ? timeLeft : ""}</p>
+      </button>
+    </div>
+  );
+});
+
+
 // setters: obj with all the setters
 function RightMenu({ inventory, setInventory, setters, modifiers, setModifiers }) {
   
-  useEffect(() => {
-  const interval = setInterval(() => {
-    setModifiers(prev => 
-      prev.map(mod => ({
-        ...mod,
-        timer: mod.timer > 0 ? mod.timer - 1 : 0
-      })).filter(mod => mod.timer > 0)
-    );
-  }, 1000);
-
-  return () => clearInterval(interval);
-}, []);
+  const handleModifierExpire = useCallback((modId) => {
+    setModifiers(prev => prev.filter(mod => mod.id !== modId));
+  }, [setModifiers]);
 
   const consumeItem = (item) => {
     const itMsg = item.msg;
@@ -873,13 +925,12 @@ function RightMenu({ inventory, setInventory, setters, modifiers, setModifiers }
       <div className="menu-section">
         <h2 className="section-title">MODIFIERS</h2>
         <div className="section-content">
-          {modifiers.map((mod, index) => (
-            <div className="item" key={index}>
-              <button>
-                <img src={mod.img} alt={mod.name}></img>
-                <p>{mod.name} | {mod.amt !== null ? mod.amt : ""}{mod.timer && mod.amt ? " | " : ""}{mod.timer !== null ? mod.timer : ""}</p>
-              </button>
-            </div>
+          {modifiers.map((mod) => (
+             <ModifierItem 
+                key={mod.id} 
+                mod={mod} 
+                onExpire={handleModifierExpire}
+              />
           ))}
         </div>
       </div>
