@@ -71,12 +71,22 @@ export const ITEMS = [
     },
     {
         id: 8,
-        name: "super super root beer",
+        name: "super duper root beer",
         img: "assets/jovial.png",
         content: "solveMultiplePuzzles-3_addStartTime-60",
         msg: "glup super super super",
         desc: "Super root beer (???)",
         cost: 9999,
+        stock: 1
+    },
+    {
+        id: 9,
+        name: "the whisperer",
+        img: "assets/jovial.png",
+        content: "whisperer-na",
+        msg: null,
+        desc: "he may help you.. (select a word)",
+        cost: 30,
         stock: 1
     }
 ]

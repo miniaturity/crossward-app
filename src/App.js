@@ -385,7 +385,8 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
     setDialogue,
     handleSolvePuzzle,
     setDialogueID,
-    setDialogueVisible
+    setDialogueVisible,
+    currentWordState,
   }
 
   return (
@@ -873,6 +874,21 @@ const effectsList = ({modifiers, setModifiers}) => {
       apply: ({mod, setStartTime}) => {
         setStartTime(mod);
       }
+    },
+    whisperer: {
+      requires: ["setDialogue", "setDialogueID", "setDialogueVisible", "currentWordState"],
+      apply: ({setDialogue, setDialogueID, setDialogueVisible, currentWordState}) => {
+        if (currentWordState) {
+          setDialogue('ion got nothing to tell you. select a word next time..')
+          setDialogueID(Date.now() * Math.random());
+          setDialogueVisible(true);
+        } else {
+          let letters = mapToUniqueRandomInt([0, 0], 0, currentWordState.length);
+          setDialogue(`psst.. i heard the letters ${currentWordState[letters[0]]} and ${currentWordState[letters[1]]} were in this word..`)
+          setDialogueID(Date.now() * Math.random());
+          setDialogueVisible(true);
+        }
+      }
     }
   };
 };
@@ -931,15 +947,16 @@ const ModifierItem = memo(({ mod }) => {
   );
 });
 
-
 // setters: obj with all the setters
 function RightMenu({ inventory, setInventory, setters, modifiers, setModifiers, boardReff }) {
 
   const consumeItem = (item) => {
-    const itMsg = item.msg;
-    setters.setDialogue(itMsg);
-    setters.setDialogueID(Date.now() * Math.random());
-    setters.setDialogueVisible(true);
+    if (item.msg) {
+      const itMsg = item.msg;
+      setters.setDialogue(itMsg);
+      setters.setDialogueID(Date.now() * Math.random());
+      setters.setDialogueVisible(true);
+    }
 
 
     const effects = item.content.split("_");
