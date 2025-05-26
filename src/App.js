@@ -1,5 +1,5 @@
 import './App.css';
-import { useState, useEffect, useRef, memo, useCallback } from 'react';
+import { useState, useEffect, useRef, memo, Fragment } from 'react';
 import useWordDB from './WordDB';
 import { ITEMS } from './items';
 
@@ -8,6 +8,7 @@ function App() {
   const [selectedWords, setSelectedWords] = useState([]);
   const [board, setBoard] = useState([[]]);
   const [placedWords, setPlacedWords] = useState([]);
+  const [startTime, setStartTime] = useState(30);
   
   const [selectedCell, setSelectedCell] = useState([]);
   const [selectedDirection, setSelectedDirection] = useState('across');
@@ -24,7 +25,7 @@ function App() {
   const [inventory, setInventory] = useState([]);
 
   const [inShop, setInShop] = useState(false);
-  const [time, setTime] = useState(30); //seconds 
+  const [time, setTime] = useState(startTime); // seconds (30 def)
   const [mult, setMult] = useState(1);
 
   const [modifiers, setModifiers] = useState([]);
@@ -38,7 +39,12 @@ function App() {
   const [correctWords, setCorrectWords] = useState([]);
   const [dialogue, setDialogue] = useState("");
   
-  const [dialogueImg, setDialogueImg] = useState("");
+  const [dialogueImg, setDialogueImg] = useState("assets/jovial.png");
+  const [puzzlesSolved, setPuzzlesSolved] = useState(0);
+  const [wordsSolved, setWordsSolved] = useState(0);
+
+  const [dialogueID, setDialogueID] = useState(0);
+  const [boardCount, setBoardCount] = useState(0);
 
 
   useEffect(() => {
@@ -82,6 +88,14 @@ function App() {
     }
   }, [selectedCell, selectedDirection, placedWords]);
 
+  const clearModTypes = (names) => {
+    names.forEach(name => {
+      setModifiers(modifiers.filter(mod => mod.name === name))
+      console.log(name);
+    });
+    console.log("cleared: "+names)
+  } 
+
   const newGame = () => {
     setInGame(true);
 
@@ -97,7 +111,7 @@ function App() {
             setStreak(0); 
             setMult(1);
           }
-          return 30;
+          return startTime;
         }
         return prevSeconds - 1;
       });
@@ -124,13 +138,15 @@ function App() {
   };
 
   const handleChangePuzzle = () => {
+    setTime(startTime);
     chooseWords();
     setSelectedCell([]);
     setCurrentClue('HINT');
     setIncorrectCells([]);
     setCorrectCells([]);
     setCorrectWords([]);
-    setModifiers(prev => prev.filter(mod => mod.timer !== null))
+    setModifiers(prev => prev.filter(mod => mod.clear === true));
+    setBoardCount(prev => prev + 1);
   };
   
 const handleCheckPuzzle = (x, customUserBoard = null) => {
@@ -155,7 +171,6 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
     if (x) { 
       setIncorrectCells(newIncorrectCells);
       setCorrectCells(newCorrectCells); 
-      console.log("checked")
     }
 
     if (correctWords.length + 1 === placedWords.length) return true;
@@ -211,10 +226,13 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
     
     setIncorrectCells(newIncorrectCells);
     setCorrectCells(newCorrectCells);
+    clearModTypes(["▲ reward", "▲ reward chance"])
+    
     
     if (allCellsCorrect && currentWord && !correctWords.includes(currentWord.word)) {
       const newCorrectWords = [...correctWords];
       newCorrectWords.push(currentWord.word);
+      setWordsSolved(prev => prev + 1);
       if (giveReward > rewardChance) {
         setBalance(prev => prev + reward)
         console.log(reward);
@@ -225,6 +243,7 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
       if (handleCheckPuzzle(false)) {
         setPoints(prev => prev + (Math.ceil(((20 * correctWords.length) * streakMult) * mult)));
         setBalance(prev => prev + (reward * mult));
+        setPuzzlesSolved(prev => prev + 1)
         handleChangePuzzle();
       }
     } else if (!allCellsCorrect) {
@@ -333,6 +352,8 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
     return allPositions.length > 0 ? allPositions[0] : [];
   }
 
+  
+
     const setters = {
     setPoints,
     setBalance,
@@ -346,6 +367,7 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
     setStreak,
     setDialogue,
     handleSolvePuzzle,
+    setDialogueID
   }
 
   return (
@@ -397,6 +419,10 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
         streakMult={streakMult}
         dialogue={dialogue}
         setDialogue={setDialogue}
+        wordsSolved={wordsSolved}
+        puzzlesSolved={puzzlesSolved}
+        dialogueID={dialogueID}
+        dialogueImg={dialogueImg}
       />
       
       <div className="right">
@@ -412,7 +438,7 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
   );
 }
 
-function DialogueBox({ dialogue, img }) {
+function DialogueBox({ dialogue, img, dialogueID }) {
   const [currDialogue, setCurrDialogue] = useState("")
   const timeoutId = useRef(null);
 
@@ -434,7 +460,7 @@ function DialogueBox({ dialogue, img }) {
         }, 2000);
         clearInterval(typewriterInterval);
       }
-    }, 50); 
+    }, 10); 
 
 
 
@@ -442,7 +468,7 @@ function DialogueBox({ dialogue, img }) {
       clearInterval(typewriterInterval); 
       clearTimeout(timeoutId.current);
     }
-  }, [dialogue]);
+  }, [dialogueID]);
 
   return (
     <>
@@ -492,7 +518,11 @@ const MidSection = ({
   streakCol,
   streakMult,
   dialogue,
-  setDialogue
+  setDialogue,
+  wordsSolved,
+  puzzlesSolved,
+  dialogueImg,
+  dialogueID,
 }) => {
 
   const formatTime = (timeInSeconds) => {
@@ -612,6 +642,8 @@ const MidSection = ({
             />
             <DialogueBox 
               dialogue={dialogue}
+              img={dialogueImg}
+              dialogueID={dialogueID}
             />
           </div>
 
@@ -629,6 +661,12 @@ const MidSection = ({
               }}
             >
                 {streak} STREAK ({streakMult}x)
+            </div>
+            <div className="points-display">
+              {wordsSolved} Words Solved
+            </div>
+            <div className="points-display">
+              {puzzlesSolved} Boards Cleared 
             </div>
             <div className="balance-display">
               ${balance}
@@ -701,7 +739,6 @@ const AddMod = ({mod, modifiers, setModifiers}) => {
   const newObj = {
     img: mod.img,
     name: mod.name,
-    timer: mod.timer,
     amt: mod.amt
   }
   setModifiers(prev => [...prev, newObj])
@@ -720,26 +757,18 @@ const effectsList = ({modifiers, setModifiers}) => {
     slow: {
       requires: ["setTime"],
       apply: ({mod, setTime}) => {
-        const modObj = {
-          name: "slow",
-          img: imgs.slow,
-          timer: null,
-          amt: null,
-          id: Date.now()
-        }
         setTime(prev => prev + mod);
-        AddMod({mod: modObj, modifiers: modifiers, setModifiers: setModifiers})
       }
     },
     reward: {
       requires: ["setReward", "setRewardChance"],
       apply: ({mod, setReward, setRewardChance}) => {
          const modObj = {
-          name: "reward",
+          name: "▲ reward",
           img: imgs.reward,
-          timer: null,
           amt: `+$${mod}`,
-          id: Date.now()
+          id: Date.now(),
+          clear: false,
         }
         setRewardChance(-1);
         setReward(mod);
@@ -752,9 +781,9 @@ const effectsList = ({modifiers, setModifiers}) => {
          const modObj = {
           name: "▲ reward chance",
           img: imgs.rewardChance,
-          timer: null,
           amt: `${(10 - mod) * 10}%`,
-          id: Date.now()
+          id: Date.now(),
+          clear: false,
         }
         setRewardChance(mod);
         AddMod({mod: modObj, modifiers: modifiers, setModifiers: setModifiers})
@@ -776,6 +805,18 @@ const effectsList = ({modifiers, setModifiers}) => {
       requires: ["handleSolvePuzzle"],
       apply: ({handleSolvePuzzle}) => {
         handleSolvePuzzle(true);
+      }
+    },
+    addStartTime: {
+      requires: ["setStartTime"],
+      apply: ({mod, setStartTime}) => {
+        setStartTime(prev => prev + mod);
+      }
+    },
+    startTime: {
+      requires: ["setStartTime"],
+      apply: ({mod, setStartTime}) => {
+        setStartTime(mod);
       }
     }
   };
@@ -823,46 +864,13 @@ function CreateMods({ mods = [], setters = {}, modifiers, setModifiers }) {
   return results;
 }
 
-const ModifierItem = memo(({ mod, onExpire }) => {
-  const [timeLeft, setTimeLeft] = useState(mod.timer);
-
-  useEffect(() => {
-    if (mod.timer) {
-    if (timeLeft <= 0) {
-      onExpire(mod.id);
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setTimeLeft(prev => {
-        const newTime = prev - 1;
-        if (newTime <= 0 && mod.timer) {
-          setTimeout(() => onExpire(mod.id), 0);
-          return 0;
-        }
-        return newTime;
-      });
-    }, 1000);
-    
-    return () => clearInterval(interval);
-  }
-    return;
-  }, [mod.id, onExpire, timeLeft]); 
-
-
+const ModifierItem = memo(({ mod }) => {
   
-
-  useEffect(() => {
-    if (mod.timer !== timeLeft && mod.timer > 0) {
-      setTimeLeft(mod.timer);
-    }
-  }, [mod.timer]);
-
   return (
     <div className="item">
       <button>
         <img src={mod.img} alt={mod.name} />
-        <p>{mod.name} | {mod.amt !== null ? mod.amt : ""}{mod.timer && mod.amt ? " | " : ""}{mod.timer !== null ? timeLeft : ""}</p>
+        <p>{mod.name} | {mod.amt !== null ? mod.amt : ""}</p>
       </button>
     </div>
   );
@@ -871,14 +879,11 @@ const ModifierItem = memo(({ mod, onExpire }) => {
 
 // setters: obj with all the setters
 function RightMenu({ inventory, setInventory, setters, modifiers, setModifiers }) {
-  
-  const handleModifierExpire = useCallback((modId) => {
-    setModifiers(prev => prev.filter(mod => mod.id !== modId));
-  }, [setModifiers]);
 
   const consumeItem = (item) => {
     const itMsg = item.msg;
     setters.setDialogue(itMsg);
+    setters.setDialogueID(Date.now() * Math.random());
 
 
     const effects = item.content.split("_");
@@ -926,11 +931,12 @@ function RightMenu({ inventory, setInventory, setters, modifiers, setModifiers }
         <h2 className="section-title">MODIFIERS</h2>
         <div className="section-content">
           {modifiers.map((mod) => (
+            <Fragment key={mod.id}>
              <ModifierItem 
                 key={mod.id} 
                 mod={mod} 
-                onExpire={handleModifierExpire}
               />
+            </Fragment>
           ))}
         </div>
       </div>
@@ -976,19 +982,55 @@ const BuyItem = ({ item, inv, bal, setInShop, setBalance, setInv, id }) => {
   );
 }
 
-const Shop = ({ inventory, balance, setBalance, setInShop, setInventory }) => {
+function mapToUniqueRandomInt(arr, min, max) {
+  if (max - min + 1 < arr.length) {
+    throw new Error("Range is too small to generate unique random numbers for all elements.");
+  }
+
+  const generatedNumbers = new Set();
+  const result = arr.map(() => {
+    let randomNumber;
+    do {
+      randomNumber = Math.floor(Math.random() * (max - min + 1)) + min;
+    } while (generatedNumbers.has(randomNumber));
+    generatedNumbers.add(randomNumber);
+    return randomNumber;
+  });
+  return result;
+}
+
+const Shop = ({ inventory, balance, setBalance, setInShop, setInventory, boardCount }) => {
   const [selectedItem, setSelectedItem] = useState(null);
+  const [shopCycle, setShopCycle] = useState([0, 0, 0, 0, 0]);
+  const [shopList, setShopList] = useState([]);
+  
   const shopItems = [...ITEMS];
 
   const handleSelectItem = (item) => {
     setSelectedItem(item);
   };
   
+  const resetShopCycle = () => {
+    setShopCycle(prev => {
+      console.log("prev: "+prev)
+      const newCycle = [...mapToUniqueRandomInt(prev, 1, shopItems.length)]
+      console.log("new: "+newCycle)
+      return newCycle;
+    }) ;
+    console.log(shopCycle);
+    setShopList(shopItems.filter(obj => shopCycle.includes(obj.id)));
+    console.log(shopList);
+  };
 
   useEffect(() => {
+    if (boardCount % 10 === 0) resetShopCycle();
+  }, [boardCount]);
+
+  useEffect(() => {
+    resetShopCycle();
     if (shopItems.length > 0 && !selectedItem) {
-      setSelectedItem(shopItems[0]);
-    }
+      setSelectedItem(shopList[0]);
+    };
   }, []); 
   
   return (
@@ -996,7 +1038,7 @@ const Shop = ({ inventory, balance, setBalance, setInShop, setInventory }) => {
       <div className="shop-items-list">
         <div className="shop-title"> <h2>Shop <strong>[${balance}]</strong></h2></div>
         <div className="items-scroll-container">
-          {shopItems.map((item, index) => (
+          {shopList.map((item, index) => (
             <div 
               key={index}
               className={`shop-list-item ${selectedItem === item ? 'selected' : ''}`}
