@@ -4,18 +4,18 @@ export const ITEMS = [
         name: "root beer",
         img: "assets/jovial.png",
         content: "slow-5",
-        msg: "You drank the root beer, time slowed down!",
-        desc: "Slows down time. (+5s)",
+        msg: "glup glup glup",
+        desc: "Mug. (+5s)",
         cost: 3,
         stock: 5
     },
     {
         id: 2,
-        name: "foresight",
+        name: "treasure buster",
         img: "assets/jovial.png",
         content: "reward-15",
-        msg: "You used foresight, $15 if you get this word right!",
-        desc: "Gives you $15 if you get the current word right.",
+        msg: "Busting some treasure...",
+        desc: "Good investment. (+$15 reward)",
         cost: 10,
         stock: 2,
     },
@@ -24,8 +24,8 @@ export const ITEMS = [
         name: "dice",
         img: "assets/jovial.png",
         content: "rewardChance-3",
-        msg: "You rolled the dice!",
-        desc: "Gives you a better chance at finding a reward on the next word solved.",
+        msg: "You rolled the dice...",
+        desc: "Gamble (+70% reward chance)",
         cost: 15,
         stock: 4
     },
@@ -34,19 +34,49 @@ export const ITEMS = [
         name: "joker card",
         img: "assets/jovial.png",
         content: "slow-60_multSet-1",
-        msg: "You played the Joker Card, time slowed down!",
-        desc: "Slows down time, resets all mults. (+60s, 1x)",
+        msg: "You played the joker card.",
+        desc: "Balatro...? (+60s time, 1x mult)",
         cost: 30,
         stock: 2
     },
     {
         id: 5,
+        name: "celsius",
+        img: "assets/jovial.png",
+        content: "slow-5_addStartTime-1",
+        msg: "You drank the celsius, you feel energized..",
+        desc: "Unhealthy energy drink (+5s, +1s start)",
+        cost: 40,
+        stock: 5
+    },
+    {
+        id: 6,
+        name: "super root beer",
+        img: "assets/jovial.png",
+        content: "slow-30_multAdd-1",
+        msg: "glup glup glup SUPER",
+        desc: "Even better mug (+30s time, +1 mult)",
+        cost: 80,
+        stock: 4
+    },
+    {
+        id: 7,
         name: "dictionary",
         img: "assets/jovial.png",
         content: "solvePuzzle-na",
-        msg: "You used the dictionary!",
-        desc: "Solves the current crossword",
+        msg: "You read the dictionary.",
+        desc: "Search up every word (Clear board)",
         cost: 100,
+        stock: 1
+    },
+    {
+        id: 8,
+        name: "super super root beer",
+        img: "assets/jovial.png",
+        content: "solveMultiplePuzzles-3_addStartTime-60",
+        msg: "glup super super super",
+        desc: "Super root beer (???)",
+        cost: 9999,
         stock: 1
     }
 ]
