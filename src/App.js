@@ -53,11 +53,24 @@ function App() {
 
   const [currDialogue, setCurrDialogue] = useState("");
   const [dialogueVisible, setDialogueVisible] = useState(false);
+  const [animationKey, setAnimationKey] = useState(0);
 
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(paused);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
 
   useEffect(() => {
     boardReff.current = board;
   }, [board]);
+
+  useEffect(() => {
+    if (streak !== 0) {
+      setAnimationKey(prev => prev + 1); 
+    }
+  }, [streak]);
 
 
   useEffect(() => {
@@ -117,19 +130,29 @@ function App() {
     }
 
     const timer = setInterval(() => {
-      setTime((prevSeconds) => {
-        if (prevSeconds <= 0) {
-          handleChangePuzzle();
-          if (correctWords.length === 0) {
-            setStreak(0); 
-            setMult(1);
+      if (!pausedRef.current) {
+        setTime((prevSeconds) => {
+          if (prevSeconds <= 0) {
+            handleChangePuzzle();
+            if (correctWords.length === 0) {
+              setStreak(0); 
+              setMult(1);
+            }
+            return startTime;
           }
-          return startTime;
-        }
-        return prevSeconds - 1;
-      });
+          console.log(paused);
+          return prevSeconds - 1;
+        });
+    }
     }, 1000);
   };
+
+  const pause = () => {
+    setPaused(prev => {
+      console.log(`paused: ${!prev}`);
+      return !prev
+    });
+  }
 
   const chooseWords = () => {
     if (!db) return;
@@ -158,7 +181,7 @@ function App() {
     setIncorrectCells([]);
     setCorrectCells([]);
     setCorrectWords([]);
-    setModifiers(prev => prev.filter(mod => mod.clear === true));
+    setModifiers(prev => prev.filter(mod => mod.clear === false));
     setBoardCount(prev => prev + 1);
   };
   
@@ -387,12 +410,13 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
     setDialogueID,
     setDialogueVisible,
     currentWordState,
+    setStartTime,
   }
 
   return (
     <div className="page">
       <div className="left">
-        <LeftMenu onNewGame={newGame} inGame={inGame} />
+        <LeftMenu onNewGame={newGame} inGame={inGame} pause={pause} paused={paused} />
       </div>
 
       <div className="top-clue">
@@ -452,6 +476,7 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
         setCurrDialogue={setCurrDialogue}
         dialogueVisible={dialogueVisible}
         setDialogueVisible={setDialogueVisible}
+        animationKey={animationKey}
       />
       
       <div className="right">
@@ -562,7 +587,8 @@ const MidSection = ({
   currDialogue,
   setCurrDialogue,
   dialogueVisible,
-  setDialogueVisible
+  setDialogueVisible,
+  animationKey
 }) => {
 
   const formatTime = (timeInSeconds) => {
@@ -703,6 +729,7 @@ const MidSection = ({
               style={{
                   color: {streakCol}
               }}
+              key={animationKey}
             >
                 {streak} STREAK ({streakMult}x)
             </div>
@@ -737,12 +764,12 @@ const MidSection = ({
   );
 };
 
-function LeftMenu({ onNewGame, inGame }) {
+function LeftMenu({ onNewGame, inGame, pause, paused }) {
   const [visibleButtons, setVisibleButtons] = useState(0);
   
   useEffect(() => {
     let buttonCount = 0;
-    const menuButtons = ["New Game", "Settings", "Credits"];
+    const menuButtons = ["New Game", "Settings", "Credits", "Pause"];
     
     const interval = setInterval(() => {
       buttonCount++;
@@ -757,9 +784,10 @@ function LeftMenu({ onNewGame, inGame }) {
   }, []);
 
   const menuButtons = [
-    { name: "New Game", action: onNewGame, disabled: inGame },
-    { name: "Settings", action: () => {} },
-    { name: "Credits", action: () => {} }
+    { name: "New Game", action: onNewGame, disabled: inGame, dependent: inGame },
+    { name: "Pause", action: pause, disabled: !inGame, dependent: !inGame },
+    { name: "Settings", action: () => {}, dependent: false },
+    { name: "Credits", action: () => {}, dependent: false },
   ];
   
   return (
@@ -768,11 +796,11 @@ function LeftMenu({ onNewGame, inGame }) {
         {menuButtons.map((button, index) => (
           <button 
             key={button.name}
-            className={`menu-button ${index < visibleButtons ? 'visible' : ''}`} 
+            className={`menu-button ${index < visibleButtons && !button.dependent ? 'visible' : 'none'}`} 
             onClick={button.action}
             disabled={button.disabled}
           >
-            {button.name}
+            {button.name} 
           </button>
         ))}
       </div>
@@ -787,7 +815,9 @@ const AddMod = ({mod, setModifiers}) => {
   const newObj = {
     img: mod.img,
     name: mod.name,
-    amt: mod.amt
+    amt: mod.amt,
+    clear: mod.clear,
+    id: mod.id
   }
   setModifiers(prev => [...prev, newObj])
 }
@@ -866,7 +896,15 @@ const effectsList = ({modifiers, setModifiers}) => {
     addStartTime: {
       requires: ["setStartTime"],
       apply: ({mod, setStartTime}) => {
+        const modObj = {
+          name: "▲ start time",
+          img: imgs.rewardChance,
+          amt: `+${mod}s`,
+          id: Date.now(),
+          clear: false,
+        }
         setStartTime(prev => prev + mod);
+        AddMod({mod: modObj, modifiers: modifiers, setModifiers: setModifiers})
       }
     },
     startTime: {
@@ -893,8 +931,8 @@ const effectsList = ({modifiers, setModifiers}) => {
   };
 };
 
-function CreateMods({ mods = [], setters = {}, modifiers, setModifiers, boardRef }) {
-  const effects = effectsList({modifiers: modifiers, setModifiers: setModifiers, boardRef: boardRef});
+function CreateMods({ mods = [], setters = {}, modifiers, setModifiers }) {
+  const effects = effectsList({modifiers: modifiers, setModifiers: setModifiers});
   const results = {};
 
   mods.forEach((mod, index) => {

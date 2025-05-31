@@ -8,6 +8,10 @@ body {
   visibility: hidden;
 }
 
+.none {
+  display: none;
+}
+
 .rainbow-container {
   position: relative;
   width: 100%;
@@ -186,10 +190,6 @@ body {
   text-overflow: ellipsis;
 }
 
-.tooltip-text.visible {
-  visibility: visible;
-  opacity: 1;
-}
 
 .top-clue {
   position: absolute;

@@ -73,7 +73,7 @@ export const ITEMS = [
         id: 8,
         name: "super duper root beer",
         img: "assets/jovial.png",
-        content: "solveMultiplePuzzles-3_addStartTime-60",
+        content: "addStartTime-60",
         msg: "glup super super super",
         desc: "Super root beer (???)",
         cost: 9999,
@@ -88,5 +88,25 @@ export const ITEMS = [
         desc: "he may help you.. (select a word)",
         cost: 30,
         stock: 1
+    },
+    {
+        id: 10,
+        name: "potato pancake",
+        img: "assets/jovial.png",
+        content: "addStartTime-10",
+        msg: "yum yum C:",
+        desc: "delicious potato pancakes (+10s start)",
+        cost: 40,
+        stock: 3
+    },
+    {
+        id: 11,
+        name: "cocktail",
+        img: "assets/jovial.png",
+        content: "addStartTime-1_slow-10_multAdd-1_rewardChance-4",
+        msg: "buuuurp",
+        desc: "furious cocktail of 4 effects (+1s start, +10s, +1 mult, +60% reward chance)",
+        cost: 60,
+        stock: 1,
     }
 ]
