@@ -8,7 +8,7 @@ function App() {
   const [selectedWords, setSelectedWords] = useState([]);
   const [board, setBoard] = useState([[]]);
   const [placedWords, setPlacedWords] = useState([]);
-  const [startTime, setStartTime] = useState(30);
+  const [startTime, setStartTime] = useState(45);
   
   const [selectedCell, setSelectedCell] = useState([]);
   const [selectedDirection, setSelectedDirection] = useState('across');
@@ -57,6 +57,7 @@ function App() {
 
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(paused);
+  const [timeElapsed, setTimeElapsed] = useState(0);
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -131,8 +132,9 @@ function App() {
 
     const timer = setInterval(() => {
       if (!pausedRef.current) {
+        setTimeElapsed(prev => prev + 1);
         setTime((prevSeconds) => {
-          if (prevSeconds <= 0) {
+          if (prevSeconds <= 0 && !inShop) {
             handleChangePuzzle();
             if (correctWords.length === 0) {
               setStreak(0); 
@@ -140,8 +142,7 @@ function App() {
             }
             return startTime;
           }
-          console.log(paused);
-          return prevSeconds - 1;
+          return prevSeconds > 0 ? prevSeconds - 1 : prevSeconds;
         });
     }
     }, 1000);
@@ -149,7 +150,6 @@ function App() {
 
   const pause = () => {
     setPaused(prev => {
-      console.log(`paused: ${!prev}`);
       return !prev
     });
   }
@@ -190,6 +190,10 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
     console.log(currentUserBoard)
     const newIncorrectCells = []; 
     const newCorrectCells = [];
+    const newCorrectWords = [...correctWords];
+    let totalNewWords = 0;
+    let totalNewPoints = 0;
+    let totalNewBalance = 0;
     
     for (let row = 0; row < board.length; row++) {
       for (let col = 0; col < board[0].length; col++) {
@@ -206,17 +210,68 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
       }
     }
     
+    // Check each word for completion and rewards
+    for (const word of placedWords) {
+      if (correctWords.includes(word.word)) continue; // Skip already completed words
+      
+      let wordComplete = true;
+      
+      // Check if all letters in the word are correct
+      for (let i = 0; i < word.word.length; i++) {
+        const letterRow = word.isHorizontal ? word.row : word.row + i;
+        const letterCol = word.isHorizontal ? word.col + i : word.col;
+        
+        if (!currentUserBoard[letterRow][letterCol] || 
+            currentUserBoard[letterRow][letterCol] !== board[letterRow][letterCol]) {
+          wordComplete = false;
+          break;
+        }
+      }
+      
+      // If word is complete, add it to correct words and calculate rewards
+      if (wordComplete) {
+        newCorrectWords.push(word.word);
+        totalNewWords++;
+        
+        const giveReward = getRandomIntInclusive(1, 10);
+        
+        if (giveReward > rewardChance) {
+          totalNewBalance += reward;
+        }
+        
+        totalNewPoints += Math.ceil((word.word.length * streakMult) * mult);
+      }
+    }
+    
     if (x) { 
       setIncorrectCells(newIncorrectCells);
       setCorrectCells(newCorrectCells); 
+      
+      // Apply rewards if there are new words
+      if (totalNewWords > 0) {
+        clearModTypes(["▲ reward", "▲ reward chance"]);
+        setWordsSolved(prev => prev + totalNewWords);
+        setPoints(prev => prev + totalNewPoints);
+        setBalance(prev => prev + totalNewBalance);
+        setStreak(prev => prev + totalNewWords);
+        setCorrectWords(newCorrectWords);
+      }
     }
 
-    if (correctWords.length + 1 === placedWords.length) return true;
+    // Check if puzzle is complete
+    if (newCorrectWords.length === placedWords.length) {
+      if (x) {
+        setPoints(prev => prev + (Math.ceil(((20 * newCorrectWords.length) * streakMult) * mult)));
+        setBalance(prev => prev + (reward * mult));
+        setPuzzlesSolved(prev => prev + 1);
+        handleChangePuzzle();
+      }
+      return true;
+    }
     return false;
 };
 
-
-  const handleCheckWord = () => {
+const handleCheckWord = () => {
     if (selectedCell.length === 0) return;
 
     const giveReward = getRandomIntInclusive(1, 10);
@@ -224,7 +279,7 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
     const [row, col] = selectedCell;
     const currentWord = findWordAtPosition(row, col, selectedDirection);
     
-    if (!currentWord) return;
+    if (!currentWord || correctWords.includes(currentWord)) return;
     
     const newIncorrectCells = [...incorrectCells];
     const newCorrectCells = [...correctCells];
@@ -279,7 +334,7 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
       setStreak(prev => prev + 1);
       setCorrectWords(newCorrectWords);
       if (handleCheckPuzzle(false)) {
-        setPoints(prev => prev + (Math.ceil(((20 * correctWords.length) * streakMult) * mult)));
+        setPoints(prev => prev + (Math.ceil(((20 * newCorrectWords.length) * streakMult) * mult)));
         setBalance(prev => prev + (reward * mult));
         setPuzzlesSolved(prev => prev + 1)
         handleChangePuzzle();
@@ -287,9 +342,7 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
     } else if (!allCellsCorrect) {
       setStreak(0);
     }
-
-
-  };
+};
 
 
   
@@ -477,6 +530,9 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
         dialogueVisible={dialogueVisible}
         setDialogueVisible={setDialogueVisible}
         animationKey={animationKey}
+        paused={paused}
+        timeElapsed={timeElapsed}
+        setters={setters}
       />
       
       <div className="right">
@@ -588,7 +644,10 @@ const MidSection = ({
   setCurrDialogue,
   dialogueVisible,
   setDialogueVisible,
-  animationKey
+  animationKey,
+  paused,
+  timeElapsed,
+  setters
 }) => {
 
   const formatTime = (timeInSeconds) => {
@@ -602,11 +661,20 @@ const MidSection = ({
   return (
     <div className="mid rainbow-container">
       <div className="rainbow-background"></div>
+
+        {paused && (
+          <div className="pause-window">
+            <h1 className="game-title">CROSSWARD (paused)</h1>
+            <p>Time Elapsed: {formatTime(timeElapsed)}</p>
+          </div>
+        )}
+      
       {inGame === false && (
         <div className="intro-overlay">
           <h1 className="game-title">CROSSWARD</h1>
         </div>
       )}
+
       
       {!inShop ? (
         <>
@@ -629,6 +697,12 @@ const MidSection = ({
                   disabled={selectedCell.length <= 1}
                 >
                   Check Word
+                </button>
+                <button 
+                  className="crossword-button"
+                  onClick={handleCheckPuzzle}
+                >
+                  Check Puzzle
                 </button>
 
             </div>
@@ -710,9 +784,11 @@ const MidSection = ({
           setShopCycle={setShopCycle}
           shopList={shopList}
           setShopList={setShopList}
+          setters={setters}
         />
       )}
     </div>
+      
   );
 };
 
@@ -938,7 +1014,6 @@ const ModifierItem = memo(({ mod }) => {
   );
 });
 
-// setters: obj with all the setters
 function RightMenu({ inventory, setInventory, setters, modifiers, setModifiers, boardReff }) {
 
   const consumeItem = (item) => {
@@ -1064,7 +1139,7 @@ function mapToUniqueRandomInt(arr, min, max) {
   return result;
 }
 
-const Shop = ({ inventory, balance, setBalance, setInShop, setInventory, boardCount, initReset, setInitReset, shopCycle, shopList, setShopCycle, setShopList }) => {
+const Shop = ({ inventory, balance, setBalance, setInShop, setInventory, boardCount, initReset, setInitReset, shopCycle, shopList, setShopCycle, setShopList, setters }) => {
   const [selectedItem, setSelectedItem] = useState(null);
   
   const shopItems = [...ITEMS];
@@ -1091,7 +1166,12 @@ const Shop = ({ inventory, balance, setBalance, setInShop, setInventory, boardCo
 
 
   useEffect(() => {
-    if (boardCount % 10 === 0) resetShopCycle();
+    if (boardCount % 10 === 0) {
+      resetShopCycle();
+      setters.setDialogue("Shop has restocked!");
+      setters.setDialogueID(Date.now() * Math.random());
+      setters.setDialogueVisible(true);
+    }
   }, [boardCount]);
 
   useEffect(() => {
@@ -1236,7 +1316,9 @@ function Board({
         e.preventDefault();
       } 
       else if (e.key === 'Backspace') {
-        if (correctCells.includes([row, col])) return;
+        if (correctCells.some(([r, c]) => r === row && c === col)) {
+          return;
+        }
         if (userBoard[row][col]) {
           const newUserBoard = [...userBoard];
           newUserBoard[row][col] = '';
@@ -1269,6 +1351,9 @@ function Board({
         e.preventDefault();
       }
       else if (/^[a-zA-Z]$/.test(e.key)) {
+        if (correctCells.some(([r, c]) => r === row && c === col)) {
+          return;
+        }
         const letter = e.key.toUpperCase();
         
         const newUserBoard = [...userBoard];
@@ -1279,8 +1364,22 @@ function Board({
           const newIncorrectCells = incorrectCells.filter(([r, c]) => !(r === row && c === col));
           setIncorrectCells(newIncorrectCells);
         }
+
+         const findNextNonCorrectCell = (startRow, startCol, direction) => {
+          let nextCell = getAdjacentCell(startRow, startCol, direction, 1);
+          
+          while (nextCell) {
+            const [nextRow, nextCol] = nextCell;
+            if (!correctCells.some(([r, c]) => r === nextRow && c === nextCol)) {
+              return nextCell;
+            }
+            nextCell = getAdjacentCell(nextRow, nextCol, direction, 1);
+          }
+          
+          return null;
+        };
         
-        const nextCell = getAdjacentCell(row, col, selectedDirection, 1);
+        const nextCell = findNextNonCorrectCell(row, col, selectedDirection);
         if (nextCell) {
           setSelectedCell(nextCell);
         } else {
@@ -1299,7 +1398,7 @@ function Board({
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedCell, selectedDirection, userBoard, board, findWordAtPosition, findNextWord, incorrectCells]);
+  }, [selectedCell, selectedDirection, correctCells, userBoard, board, findWordAtPosition, findNextWord, incorrectCells]);
 
   const getAdjacentCell = (row, col, direction, step) => {
     const isHorizontal = direction === 'across';
