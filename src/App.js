@@ -21,7 +21,7 @@ function App() {
   const [inGame, setInGame] = useState(false);
 
   const [points, setPoints] = useState(0);
-  const [balance, setBalance] = useState(100);
+  const [balance, setBalance] = useState(0);
   const [inventory, setInventory] = useState([]);
 
   const [inShop, setInShop] = useState(false);
@@ -29,7 +29,7 @@ function App() {
   const [mult, setMult] = useState(1);
 
   const [modifiers, setModifiers] = useState([]);
-  const [reward, setReward] = useState(6);
+  const [reward, setReward] = useState(10);
 
   const [rewardChance, setRewardChance] = useState(7); // 3/10 chance (10 - 7)
   const [streak, setStreak] = useState(0);
@@ -76,7 +76,7 @@ function App() {
   useEffect(() => {
     setStreakCol(streak >= 50 ? "streak-50" : streak >= 15 ? "streak-15" : streak >= 5 ? "streak-5" : "");
     setStreakMult(streak >= 50 ? 1.5 : streak >= 15 ? 1.2 : streak >= 5 ? 1.1 : 1)
-    setReward(4);
+    setReward(10);
     setRewardChance(7);
   }, [streak])
 
@@ -630,55 +630,7 @@ const MidSection = ({
                 >
                   Check Word
                 </button>
-                <button 
-                  className="crossword-button"
-                  onClick={handleCheckPuzzle}
-                >
-                  Check Puzzle
-                </button>
-                <button 
-                  className="crossword-button"
-                  onClick={handleSolvePuzzle}
-                >
-                  Solve Puzzle
-                </button>
-                <button
-                  className="crossword-button"
-                  onClick={() => {console.log(CreateMods({
-                    mods: [
-                      { effect: "slow", mod: 30 },
-                    
-                    ],
-                    setters: { setTime }
-                  }))}}
-                >
-                  Time Test
-                </button>
-                <button
-                  className="crossword-button"
-                  onClick={() => {console.log(CreateMods(
-                    {
-                      mods: [
-                        { effect: "multAdd", mod: 1 },
-                      ],
-                      setters: { setMult }
-                    }
-                  ))}}
-                >
-                  Mult Test
-                </button>
-                <button
-                  className="crossword-button"
-                  onClick={() => {setStreak(prev => prev + 1)}}
-                >
-                  Streak Test
-                </button>
-                <button
-                  className="crossword-button"
-                  onClick={() => {setBalance(prev => prev + 99999)}}
-                >
-                  ++Dabloons Button
-                </button>
+
             </div>
           </div>
           
@@ -769,7 +721,7 @@ function LeftMenu({ onNewGame, inGame, pause, paused }) {
   
   useEffect(() => {
     let buttonCount = 0;
-    const menuButtons = ["New Game", "Settings", "Credits", "Pause"];
+    const menuButtons = ["New Game", "Settings", "Credits", "Pause", "Unpause"];
     
     const interval = setInterval(() => {
       buttonCount++;
@@ -778,16 +730,17 @@ function LeftMenu({ onNewGame, inGame, pause, paused }) {
       if (buttonCount >= menuButtons.length) {
         clearInterval(interval);
       }
-    }, 200); 
+    }, 5); 
     
     return () => clearInterval(interval);
   }, []);
 
   const menuButtons = [
-    { name: "New Game", action: onNewGame, disabled: inGame, dependent: inGame },
-    { name: "Pause", action: pause, disabled: !inGame, dependent: !inGame },
-    { name: "Settings", action: () => {}, dependent: false },
-    { name: "Credits", action: () => {}, dependent: false },
+    { name: "New Game", action: onNewGame, disabled: inGame, dependent: !inGame },
+    { name: "Pause", action: pause, disabled: !inGame, dependent: inGame && !paused },
+    { name: "Unpause", action: pause, disabled: !inGame, dependent: inGame && paused},
+    { name: "Settings", action: () => {}, dependent: true },
+    { name: "Credits", action: () => {}, dependent: true },
   ];
   
   return (
@@ -796,7 +749,7 @@ function LeftMenu({ onNewGame, inGame, pause, paused }) {
         {menuButtons.map((button, index) => (
           <button 
             key={button.name}
-            className={`menu-button ${index < visibleButtons && !button.dependent ? 'visible' : 'none'}`} 
+            className={`menu-button ${index < visibleButtons && button.dependent ? '' : 'none'}`} 
             onClick={button.action}
             disabled={button.disabled}
           >
@@ -1205,7 +1158,20 @@ const Shop = ({ inventory, balance, setBalance, setInShop, setInventory, boardCo
             </div>
           </>
         ) : (
-          <div className="no-selection">Select an item to view details</div>
+          <div className="detail-info">
+            <div className="detail-description">
+            Select an item to view details
+
+            <div className="item-buttons">
+              <button
+                className="back-button"
+                onClick={() => {setInShop(false)}}
+              >
+                Back
+              </button>
+            </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
