@@ -24,7 +24,6 @@ function App() {
   const [balance, setBalance] = useState(0);
   const [inventory, setInventory] = useState([]);
 
-  const [inShop, setInShop] = useState(false);
   const [time, setTime] = useState(startTime); // seconds (30 def)
   const [mult, setMult] = useState(1);
 
@@ -76,6 +75,7 @@ function App() {
 
   const [lost, setLost] = useState(false);
   const [timerRunning, setTimerRunning] = useState(false);
+  const [currentPage, setCurrentPage] = useState("game");
 
   const correctWordsRef = useRef(correctWords);
   const defaultStats = [
@@ -103,11 +103,25 @@ function App() {
     { id: 15, func: function(d) { setPuzzlesSolved(d) }, def: 0 },
     { id: 16, func: function(d) { setWordsSolved(d) }, def: 0 },
   ];
-  
+  const [wordCount, setWordCount] = useState(15);
+
+  const wordCountRef = useRef(wordCount);
+  const [tick, setTick] = useState(1000);
+  const tickRef = useRef(tick);
+
+  const [livesAnim, setLivesAnim] = useState(1);
+
+  useEffect(() => {
+    tickRef.current = tick;
+  }, [tick])
 
   useEffect(() => {
     pausedRef.current = paused;
   }, [paused]);
+
+  useEffect(() => {
+    setLivesAnim(prev => prev + 1);
+  }, [livesLost])
 
   useEffect(() => {
     if (streakFrozen > 0 || streakFrozen !== prevStreakFrozen) {
@@ -124,7 +138,11 @@ function App() {
 
   useEffect(() => {
     correctWordsRef.current = correctWords
-  }, [correctWords])
+  }, [correctWords]);
+
+  useEffect(() => {
+    wordCountRef.current = wordCount;
+  }, [wordCount])
 
   useEffect(() => {
     setStreakCol(streak >= 50 ? "streak-50" : streak >= 15 ? "streak-15" : streak >= 5 ? "streak-5" : "");
@@ -235,7 +253,7 @@ function App() {
       timer = setInterval(() => {
         setTimeElapsed(prev => prev + 1);
           setTime((prevSeconds) => {
-            if (prevSeconds <= 0 && !inShop && !pausedRef.current) {
+            if (prevSeconds <= 0 && currentPage !== "shop" && !pausedRef.current) {
               handleChangePuzzle();
               if (correctWordsRef.current.length === 0) {
                 setLives(prev => prev - 1);
@@ -251,7 +269,7 @@ function App() {
             }
             return prevSeconds > 0 ? prevSeconds - 1 : prevSeconds;
           });
-        }, 1000);
+        }, tickRef.current);
     }
     
     return () => {
@@ -269,10 +287,11 @@ function App() {
 
   const chooseWords = () => {
     if (!db) return;
+    console.log(db);
 
     let results = [];
-    for (let i = 0; i < getRandomIntInclusive(12, 20); i++) {
-      const randomLength = getRandomIntInclusive(4, 7);
+    for (let i = 0; i < wordCountRef.current; i++) {
+      const randomLength = getRandomIntInclusive(4, 8);
       const words = db[randomLength];
       
       const randomIndex = Math.floor(Math.random() * words.length);
@@ -288,6 +307,7 @@ function App() {
 
   const handleChangePuzzle = () => {
     setTime(startTime);
+    setWordCount(20);
     chooseWords();
     setSelectedCell([]);
     setCurrentClue('HINT');
@@ -296,7 +316,6 @@ function App() {
     setCorrectWords([]);
     setModifiers(prev => prev.filter(mod => mod.clear === false));
     setBoardCount(prev => prev + 1);
-    console.log("Changing")
   };
   
 const handleCheckPuzzle = (x, customUserBoard = null) => {
@@ -322,9 +341,8 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
       }
     }
     
-    // Check each word for completion and rewards
     for (const word of placedWords) {
-      if (correctWords.includes(word.word)) continue; // Skip already completed words
+      if (correctWords.includes(word.word)) continue; 
       
       let wordComplete = true;
       let wordEmpty = true;
@@ -583,7 +601,6 @@ const handleCheckWord = () => {
     setPoints,
     setBalance,
     setInventory,
-    setInShop,
     setTime,
     setMult,
     setModifiers,
@@ -600,22 +617,22 @@ const handleCheckWord = () => {
     boardReff,
     setStreakFrozen,
     streakFrozen,
+    setWordCount,
+    setTick,
   }
 
   return (
-    <div className="page">
+    <div className={`page`}>
       <div className="left">
         <LeftMenu onNewGame={newGame} inGame={inGame} pause={pause} paused={paused} />
       </div>
 
       <div className="top-clue">
-              {currentClue}
+        {currentClue}
       </div>
       
       <MidSection 
         inGame={inGame}
-        inShop={inShop}
-        setInShop={setInShop}
         currentClue={currentClue}
         handleCheckWord={handleCheckWord}
         board={board}
@@ -674,6 +691,9 @@ const handleCheckWord = () => {
         highScores={highScores}
         livesLost={livesLost}
         lost={lost}
+        livesAnim={livesAnim}
+        setCurrentPage={setCurrentPage}
+        currentPage={currentPage}
       />
       
       <div className="right">
@@ -734,10 +754,7 @@ function DialogueBox({ dialogue, img, dialogueID, currDialogue, setCurrDialogue,
 
 const MidSection = ({ 
   inGame, 
-  inShop, 
-  currentClue, 
   handleCheckWord, 
-  setInShop, 
   board, 
   userBoard, 
   setUserBoard, 
@@ -793,7 +810,10 @@ const MidSection = ({
   lives,
   highScores,
   livesLost,
-  lost
+  lost,
+  livesAnim,
+  currentPage,
+  setCurrentPage
 }) => {
 
   const formatTime = (timeInSeconds) => {
@@ -855,7 +875,7 @@ const MidSection = ({
       
         <>
           <div className="mid-left" style={{
-            display: `${inShop || lost ? "none" : ""}`
+            display: `${currentPage !== "game" || lost ? "none" : ""}`
           }}>
             <div className="actions text-3d-left">
 
@@ -865,7 +885,7 @@ const MidSection = ({
 
                 <button 
                   className="crossword-button"
-                  onClick={() => {setInShop(true)}}
+                  onClick={() => {setCurrentPage("shop")}}
                 > 
                   Shop 
                 </button>
@@ -887,7 +907,7 @@ const MidSection = ({
           </div>
           
           <div className="mid-center" style={{
-            display: `${inShop || lost ? "none" : ""}`
+            display: `${currentPage !== "game" || lost ? "none" : ""}`
           }}>
             <div className={`timer-${timer > 5 ? "" : "low"}`}>
               {formatTime(timer)}
@@ -926,13 +946,13 @@ const MidSection = ({
 
           
           <div className="mid-right text-3d-right" style={{
-            display: `${inShop || lost ? "none" : ""}`
+            display: `${currentPage !== "game" || lost ? "none" : ""}`
           }}>
             <h1 className="display-title">
               STATS
             </h1>
-            <div className="lives-display">
-              {lives} LIVES
+            <div className={`lives-display ${livesLost !== 0 ? 'lose-life' : ''}`} key={livesAnim}>
+                {lives}x <span><img src="assets/jovial.png" alt="life"/></span>
             </div>
             <div className="points-display">
               {points} PTS ({multiplier}x)
@@ -960,7 +980,6 @@ const MidSection = ({
           inventory={inventory}
           balance={balance}
           setBalance={setBalance}
-          setInShop={setInShop}
           setInventory={setInventory}
           initReset={initReset}
           setInitReset={setInitReset}
@@ -970,7 +989,8 @@ const MidSection = ({
           setShopList={setShopList}
           setters={setters}
           boardCount={boardCount}
-          inShop={inShop}
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
         />
 
         </>
@@ -1120,7 +1140,7 @@ const effectsList = ({modifiers, setModifiers}) => {
           clear: false,
         }
         setStartTime(prev => prev + mod);
-        AddMod({mod: modObj, modifiers: modifiers, setModifiers: setModifiers})
+        if (mod > 0) AddMod({mod: modObj, modifiers: modifiers, setModifiers: setModifiers})
       }
     },
     startTime: {
@@ -1187,6 +1207,18 @@ const effectsList = ({modifiers, setModifiers}) => {
       requires: ["setStreakFrozen"],
       apply: ({setStreakFrozen, mod}) => {
         setStreakFrozen(prev => prev + mod);
+      }
+    },
+    wordCountSet: {
+      requires: ["setWordCount"],
+      apply: ({mod, setWordCount}) => {
+        setWordCount(mod);
+      }
+    },
+    tickSet: {
+      requires: ["setTick"],
+      apply: ({mod, setTick}) => {
+        setTick(mod);
       }
     }
   };
@@ -1317,7 +1349,7 @@ function RightMenu({ inventory, setInventory, setters, modifiers, setModifiers, 
   );
 }
 
-const BuyItem = ({ item, inv, bal, setInShop, setBalance, setInv, id }) => {  
+const BuyItem = ({ item, inv, bal, setBalance, setInv, id, setCurrentPage }) => {  
   const [canBuyMap, setCanBuyMap] = useState({});
 
   const canBuy = canBuyMap[item.id] !== false && bal >= item.cost && item.stock > 0;
@@ -1347,7 +1379,7 @@ const BuyItem = ({ item, inv, bal, setInShop, setBalance, setInv, id }) => {
       </button>
       <button
         className="back-button"
-        onClick={() => {setInShop(false)}}
+        onClick={() => {setCurrentPage("game")}}
       >
         Back
       </button>
@@ -1376,7 +1408,6 @@ const Shop = ({
   inventory, 
   balance, 
   setBalance, 
-  setInShop, 
   setInventory, 
   boardCount, 
   initReset, 
@@ -1386,7 +1417,8 @@ const Shop = ({
   setShopCycle, 
   setShopList, 
   setters, 
-  inShop 
+  setCurrentPage,
+  currentPage
 }) => {
   const [selectedItem, setSelectedItem] = useState(null);
   
@@ -1433,7 +1465,7 @@ const Shop = ({
   
   return (
    <div className="shop-container" style={{
-            display: `${!inShop ? "none" : ""}`
+            display: `${currentPage === "game" ? "none" : ""}`
           }}>
       <div className="shop-items-list">
         <div className="shop-title"> <h2>Shop <strong>[{balance} zł]</strong></h2></div>
@@ -1480,8 +1512,8 @@ const Shop = ({
                 setInv={setInventory}
                 bal={balance}
                 setBalance={setBalance}
-                setInShop={setInShop}
                 id={selectedItem.id}
+                setCurrentPage={setCurrentPage}
               />
             </div>
           </>
@@ -1493,7 +1525,7 @@ const Shop = ({
             <div className="item-buttons">
               <button
                 className="back-button"
-                onClick={() => {setInShop(false)}}
+                onClick={() => {setCurrentPage("game")}}
               >
                 Back
               </button>
