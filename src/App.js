@@ -291,7 +291,7 @@ function App() {
 
     let results = [];
     for (let i = 0; i < wordCountRef.current; i++) {
-      const randomLength = getRandomIntInclusive(4, 8);
+      const randomLength = getRandomIntInclusive(4, 10);
       const words = db[randomLength];
       
       const randomIndex = Math.floor(Math.random() * words.length);
