@@ -108,5 +108,25 @@ export const ITEMS = [
         desc: "furious cocktail of 4 effects (+1s start, +10s, +1 mult, +60% reward chance)",
         cost: 60,
         stock: 1,
+    },
+    {
+        id: 12,
+        name: "firework",
+        img: "assets/jovial.png",
+        content: "fillRandomLetters-5",
+        msg: "boom",
+        desc: "explosion of letters",
+        cost: 20,
+        stock: 3
+    },
+    {
+        id: 13,
+        name: "brisk iced tea",
+        img: "assets/jovial.png",
+        content: "freezeStreak-1",
+        msg: "",
+        desc: "cold.. (+1 Streak Freeze)",
+        cost: 25,
+        stock: 1
     }
 ]

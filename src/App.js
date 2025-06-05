@@ -59,11 +59,27 @@ function App() {
   const pausedRef = useRef(paused);
   const [timeElapsed, setTimeElapsed] = useState(0);
 
+  const [streakFrozen, setStreakFrozen] = useState(0);
+  const [prevStreakFrozen, setPrevStreakFrozen] = useState(streakFrozen);
+  const [highestStreak, setHighestStreak] = useState(0);
+
+  const [lives, setLives] = useState(maxLives);
+  const [maxLives, setMaxLives] = useState(5);
+
   const correctWordsRef = useRef(correctWords);
 
   useEffect(() => {
     pausedRef.current = paused;
   }, [paused]);
+
+  useEffect(() => {
+    if (streakFrozen > 0 || streakFrozen !== prevStreakFrozen) {
+      setDialogue(`Streak Frozen: ${streakFrozen} freeze(s) left`);
+      setDialogueID(Date.now() * Math.random());
+      setDialogueVisible(true);
+      setPrevStreakFrozen(streakFrozen);
+    }
+  }, [streakFrozen]);
 
   useEffect(() => {
     boardReff.current = board;
@@ -78,7 +94,6 @@ function App() {
       setAnimationKey(prev => prev + 1); 
     }
   }, [streak]);
-
 
   useEffect(() => {
     setStreakCol(streak >= 50 ? "streak-50" : streak >= 15 ? "streak-15" : streak >= 5 ? "streak-5" : "");
@@ -142,7 +157,12 @@ function App() {
             handleChangePuzzle();
             if (correctWordsRef.current.length === 0) {
               console.log(correctWords);
-              setStreak(0); 
+              if (streakFrozen <= 0) {
+                setStreak(0); 
+              } else {
+                console.log("frozen");
+                setStreakFrozen(prev => prev - 1)
+              }
               setMult(1);
             }
             return startTime;
@@ -242,8 +262,13 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
         }
         
         totalNewPoints += Math.ceil((word.word.length * streakMult) * mult);
-      } else if (!wordComplete) {
-        setStreak(0);
+      } else if (!wordComplete && x) {
+        if (streakFrozen <= 0) {
+          setStreak(0);
+        } else {
+          console.log("frozen");
+          setStreakFrozen(prev => prev - 1)
+        }
       }
     }
     
@@ -341,7 +366,12 @@ const handleCheckWord = () => {
         handleChangePuzzle();
       }
     } else if (!allCellsCorrect) {
-      setStreak(0);
+      if (streakFrozen <= 0) {
+        setStreak(0);
+      } else {
+        console.log("frozen");
+        setStreakFrozen(prev => prev - 1)
+      }
     }
 };
 
@@ -465,6 +495,10 @@ const handleCheckWord = () => {
     setDialogueVisible,
     currentWordState,
     setStartTime,
+    setUserBoard,
+    boardReff,
+    setStreakFrozen,
+    streakFrozen,
   }
 
   return (
@@ -736,6 +770,7 @@ const MidSection = ({
               onCheckWord={handleCheckWord}
               onSolvePuzzle={handleSolvePuzzle}
               inGame={inGame}
+              paused={paused}
             />
             <DialogueBox 
               dialogue={dialogue}
@@ -964,12 +999,57 @@ const effectsList = ({modifiers, setModifiers}) => {
           setDialogueVisible(true);
         }
       }
+    },
+    fillRandomLetters: {
+      requires: ["setUserBoard", "boardReff"],
+      apply: ({setUserBoard, boardReff, mod}) => {
+        const board = boardReff.current;
+        if (!board || board.length === 0) return;
+        
+        const emptyCells = [];
+        for (let row = 0; row < board.length; row++) {
+          for (let col = 0; col < board[0].length; col++) {
+            if (board[row][col] !== '-') {
+              emptyCells.push([row, col]);
+            }
+          }
+        }
+        
+        if (emptyCells.length === 0) return;
+        
+        const cellsToFill = Math.min(mod, emptyCells.length);
+        const selectedCells = [];
+        
+        for (let i = 0; i < cellsToFill; i++) {
+          const randomIndex = Math.floor(Math.random() * emptyCells.length);
+          selectedCells.push(emptyCells[randomIndex]);
+          emptyCells.splice(randomIndex, 1);
+        }
+        
+        setUserBoard(prevBoard => {
+          const newBoard = prevBoard.map(row => [...row]);
+          
+          selectedCells.forEach(([row, col]) => {
+            if (newBoard[row][col] === '' || newBoard[row][col] === undefined) {
+              newBoard[row][col] = board[row][col];
+            }
+          });
+          
+          return newBoard;
+        });
+      }
+    },
+    freezeStreak: {
+      requires: ["setStreakFrozen"],
+      apply: ({setStreakFrozen, mod}) => {
+        setStreakFrozen(prev => prev + mod);
+      }
     }
   };
 };
 
-function CreateMods({ mods = [], setters = {}, modifiers, setModifiers }) {
-  const effects = effectsList({modifiers: modifiers, setModifiers: setModifiers});
+function CreateMods({ mods = [], setters = {}, modifiers, setModifiers, boardReff }) {
+  const effects = effectsList({modifiers: modifiers, setModifiers: setModifiers, boardReff: boardReff});
   const results = {};
 
   mods.forEach((mod, index) => {
@@ -988,6 +1068,7 @@ function CreateMods({ mods = [], setters = {}, modifiers, setModifiers }) {
         success: false, 
         message: `Missing required setters: ${missingSetters.join(', ')}` 
       };
+      
       return;
     }
     
@@ -1300,7 +1381,8 @@ function Board({
   onCheckWord,
   onSolvePuzzle,
   inGame,
-  correctCells
+  correctCells,
+  paused
 }) {
   const [numberedGrid, setNumberedGrid] = useState([]);
   const boardRef = useRef(null);
@@ -1321,7 +1403,7 @@ function Board({
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (selectedCell.length === 0) return;
+      if (selectedCell.length === 0 || paused || !inGame) return;
       
       const [row, col] = selectedCell;
       
