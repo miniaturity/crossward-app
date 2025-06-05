@@ -21,7 +21,7 @@ function App() {
   const [inGame, setInGame] = useState(false);
 
   const [points, setPoints] = useState(0);
-  const [balance, setBalance] = useState(999);
+  const [balance, setBalance] = useState(0);
   const [inventory, setInventory] = useState([]);
 
   const [inShop, setInShop] = useState(false);
@@ -74,7 +74,36 @@ function App() {
   const [lives, setLives] = useState(maxLives);
   const [livesLost, setLivesLost] = useState(0);
 
+  const [lost, setLost] = useState(false);
+  const [timerRunning, setTimerRunning] = useState(false);
+
   const correctWordsRef = useRef(correctWords);
+  const defaultStats = [
+    { id: 1, func: function(d) { setPoints(d) }, def: 0 },
+    { id: 2, func: function(d) { setLives(d) }, def: 5 },
+    { id: 3, func: function(d) { setStartTime(d) }, def: 45 },
+    { id: 4, func: function(d) { setBalance(d) }, def: 0 },
+    { id: 5, func: function(d) { setStreakFrozen(d) }, def: 0 },
+    { id: 6, func: function(d) { setTimeElapsed(d) }, def: 0 },
+    { id: 7, func: function(d) { setBoardCount(d) }, def: 0 },
+    { id: 8, func: function(d) { setReward(d) }, def: 10 },
+    { id: 9, func: function(d) { setModifiers(d) }, def: [] },
+    { id: 10, func: function(d) { setStreak(d) }, def: 0 },
+    { id: 11, func: function(d) { setMult(d) }, def: 1 },
+    { id: 12, func: function(d) { setHighScores(d) }, def: {
+      streak: 0,
+      balance: 0,
+      reward: 0,
+      mult: 0,
+      lives: 0,
+      livesLost: 0
+    }},
+    { id: 13, func: function(d) { setRewardChance(d) }, def: 7 },
+    { id: 14, func: function(d) { setPrevStreakFrozen(d) }, def: 0 },
+    { id: 15, func: function(d) { setPuzzlesSolved(d) }, def: 0 },
+    { id: 16, func: function(d) { setWordsSolved(d) }, def: 0 },
+  ];
+  
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -104,6 +133,20 @@ function App() {
     setRewardChance(7);
   }, [streak])
 
+  useEffect(() => {
+    if (lives <= 0) setLost(true);
+  }, [lives])
+
+  const endGame = () => {
+    setInGame(false);
+    setTimerRunning(false);
+  };
+
+  useEffect(() => {
+    if (lost) {
+      endGame();
+    };
+  }, [lost])
 
   useEffect(() => {
     if (!db) return;
@@ -175,34 +218,48 @@ function App() {
   }, [balance, reward, mult, lives])
 
   const newGame = () => {
+    if (lost) handleChangePuzzle();
+    setLost(false);
     setInGame(true);
+    setTimerRunning(true);
 
-    if (time <= 0) {
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setTimeElapsed(prev => prev + 1);
-        setTime((prevSeconds) => {
-          if (prevSeconds <= 0 && !inShop && !pausedRef.current) {
-            handleChangePuzzle();
-            if (correctWordsRef.current.length === 0) {
-              setLives(prev => prev - 1);
-              setLivesLost(prev => prev + 1)
-              if (streakFrozen <= 0) {
-                setStreak(0); 
-              } else {
-                console.log("frozen");
-                setStreakFrozen(prev => prev - 1)
-              }
-              setMult(1);
-            }
-            return startTime;
-          }
-          return prevSeconds > 0 ? prevSeconds - 1 : prevSeconds;
-        });
-    }, 1000);
+    defaultStats.forEach(stat => {
+      stat.func(stat.def);
+    })
   };
+
+
+  useEffect(() => {
+    let timer;
+    if (timerRunning) {
+      timer = setInterval(() => {
+        setTimeElapsed(prev => prev + 1);
+          setTime((prevSeconds) => {
+            if (prevSeconds <= 0 && !inShop && !pausedRef.current) {
+              handleChangePuzzle();
+              if (correctWordsRef.current.length === 0) {
+                setLives(prev => prev - 1);
+                setLivesLost(prev => prev + 1)
+                if (streakFrozen <= 0) {
+                  setStreak(0); 
+                } else {
+                  setStreakFrozen(prev => prev - 1)
+                }
+                setMult(1);
+              }
+              return startTime;
+            }
+            return prevSeconds > 0 ? prevSeconds - 1 : prevSeconds;
+          });
+        }, 1000);
+    }
+    
+    return () => {
+      if (timer) { 
+        clearInterval(timer);
+      }
+    }
+  }, [timerRunning])
 
   const pause = () => {
     setPaused(prev => {
@@ -270,15 +327,23 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
       if (correctWords.includes(word.word)) continue; // Skip already completed words
       
       let wordComplete = true;
+      let wordEmpty = true;
+      let hasIncorrectLetter = false;
       
       for (let i = 0; i < word.word.length; i++) {
         const letterRow = word.isHorizontal ? word.row : word.row + i;
         const letterCol = word.isHorizontal ? word.col + i : word.col;
         
-        if (!currentUserBoard[letterRow][letterCol] || 
-            currentUserBoard[letterRow][letterCol] !== board[letterRow][letterCol]) {
+        if (!currentUserBoard[letterRow][letterCol]) {
           wordComplete = false;
-          break;
+          continue;
+        }
+
+        wordEmpty = false; // Word has at least one letter filled
+        
+        if (currentUserBoard[letterRow][letterCol] !== board[letterRow][letterCol]) {
+          wordComplete = false;
+          hasIncorrectLetter = true;
         }
       }
       
@@ -293,9 +358,10 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
         }
         
         totalNewPoints += Math.ceil((word.word.length * streakMult) * mult);
-      } else if (!wordComplete && x) {
-          setLives(prev => prev - 1);
-          setLivesLost(prev => prev + 1)
+      } else if (!wordComplete && x && !wordEmpty && hasIncorrectLetter) {
+        // Only penalize if word is not empty AND has incorrect letters
+        setLives(prev => prev - 1);
+        setLivesLost(prev => prev + 1)
         if (streakFrozen <= 0) {
           setStreak(0);
         } else {
@@ -607,6 +673,7 @@ const handleCheckWord = () => {
         lives={lives}
         highScores={highScores}
         livesLost={livesLost}
+        lost={lost}
       />
       
       <div className="right">
@@ -725,7 +792,8 @@ const MidSection = ({
   boardCount,
   lives,
   highScores,
-  livesLost
+  livesLost,
+  lost
 }) => {
 
   const formatTime = (timeInSeconds) => {
@@ -754,8 +822,31 @@ const MidSection = ({
             </p>
           </div>
         )}
+
+        {lost && (
+          <div className="lost-window">
+            <p>
+              <h1>You Lost!</h1>
+              <br /> Time Elapsed: {formatTime(timeElapsed)}
+              <br />
+
+              <br /> Score: {points}
+              <br /> {wordsSolved} Words Solved
+              <br /> {puzzlesSolved} Boards Cleared 
+              <br />
+
+              <br /> Highest Streak: {highScores.streak}
+              <br /> Highest Balance: {highScores.balance} 
+              <br /> Total Boards Played: {boardCount}
+              <br /> Total Lives Lost: {livesLost}
+              <br /> Highest Reward Found: {highScores.reward}
+              <br /> Highest Mult: {highScores.mult}
+              <br /> Most Lives: {highScores.lives}
+            </p>
+          </div>
+        )}
       
-      {inGame === false && (
+      {(inGame === false && lost === false) && (
         <div className="intro-overlay">
           <h1 className="game-title">CROSSWARD</h1>
         </div>
@@ -764,7 +855,7 @@ const MidSection = ({
       
         <>
           <div className="mid-left" style={{
-            display: `${inShop ? "none" : ""}`
+            display: `${inShop || lost ? "none" : ""}`
           }}>
             <div className="actions text-3d-left">
 
@@ -796,7 +887,7 @@ const MidSection = ({
           </div>
           
           <div className="mid-center" style={{
-            display: `${inShop ? "none" : ""}`
+            display: `${inShop || lost ? "none" : ""}`
           }}>
             <div className={`timer-${timer > 5 ? "" : "low"}`}>
               {formatTime(timer)}
@@ -835,7 +926,7 @@ const MidSection = ({
 
           
           <div className="mid-right text-3d-right" style={{
-            display: `${inShop ? "none" : ""}`
+            display: `${inShop || lost ? "none" : ""}`
           }}>
             <h1 className="display-title">
               STATS
