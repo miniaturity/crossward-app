@@ -21,7 +21,7 @@ function App() {
   const [inGame, setInGame] = useState(false);
 
   const [points, setPoints] = useState(0);
-  const [balance, setBalance] = useState(0);
+  const [balance, setBalance] = useState(999);
   const [inventory, setInventory] = useState([]);
 
   const [inShop, setInShop] = useState(false);
@@ -59,6 +59,8 @@ function App() {
   const pausedRef = useRef(paused);
   const [timeElapsed, setTimeElapsed] = useState(0);
 
+  const correctWordsRef = useRef(correctWords);
+
   useEffect(() => {
     pausedRef.current = paused;
   }, [paused]);
@@ -66,6 +68,10 @@ function App() {
   useEffect(() => {
     boardReff.current = board;
   }, [board]);
+
+  useEffect(() => {
+    correctWordsRef.current = correctWords
+  }, [correctWords])
 
   useEffect(() => {
     if (streak !== 0) {
@@ -118,9 +124,7 @@ function App() {
   const clearModTypes = (names) => {
     names.forEach(name => {
       setModifiers(modifiers.filter(mod => mod.name === name))
-      console.log(name);
     });
-    console.log("cleared: "+names)
   } 
 
   const newGame = () => {
@@ -136,7 +140,8 @@ function App() {
         setTime((prevSeconds) => {
           if (prevSeconds <= 0 && !inShop) {
             handleChangePuzzle();
-            if (correctWords.length === 0) {
+            if (correctWordsRef.current.length === 0) {
+              console.log(correctWords);
               setStreak(0); 
               setMult(1);
             }
@@ -183,11 +188,11 @@ function App() {
     setCorrectWords([]);
     setModifiers(prev => prev.filter(mod => mod.clear === false));
     setBoardCount(prev => prev + 1);
+    console.log("Changing")
   };
   
 const handleCheckPuzzle = (x, customUserBoard = null) => {
     const currentUserBoard = customUserBoard || userBoard;
-    console.log(currentUserBoard)
     const newIncorrectCells = []; 
     const newCorrectCells = [];
     const newCorrectWords = [...correctWords];
@@ -199,7 +204,6 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
       for (let col = 0; col < board[0].length; col++) {
         if (board[row][col] === '-') continue;
         
-        console.log(typeof row)
         if (currentUserBoard[row][col]) {
           if (currentUserBoard[row][col] !== board[row][col]) {
             newIncorrectCells.push([row, col]);
@@ -216,7 +220,6 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
       
       let wordComplete = true;
       
-      // Check if all letters in the word are correct
       for (let i = 0; i < word.word.length; i++) {
         const letterRow = word.isHorizontal ? word.row : word.row + i;
         const letterCol = word.isHorizontal ? word.col + i : word.col;
@@ -228,7 +231,6 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
         }
       }
       
-      // If word is complete, add it to correct words and calculate rewards
       if (wordComplete) {
         newCorrectWords.push(word.word);
         totalNewWords++;
@@ -240,6 +242,8 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
         }
         
         totalNewPoints += Math.ceil((word.word.length * streakMult) * mult);
+      } else if (!wordComplete) {
+        setStreak(0);
       }
     }
     
@@ -247,7 +251,6 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
       setIncorrectCells(newIncorrectCells);
       setCorrectCells(newCorrectCells); 
       
-      // Apply rewards if there are new words
       if (totalNewWords > 0) {
         clearModTypes(["▲ reward", "▲ reward chance"]);
         setWordsSolved(prev => prev + totalNewWords);
@@ -258,7 +261,6 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
       }
     }
 
-    // Check if puzzle is complete
     if (newCorrectWords.length === placedWords.length) {
       if (x) {
         setPoints(prev => prev + (Math.ceil(((20 * newCorrectWords.length) * streakMult) * mult)));
@@ -328,7 +330,6 @@ const handleCheckWord = () => {
       setWordsSolved(prev => prev + 1);
       if (giveReward > rewardChance) {
         setBalance(prev => prev + reward)
-        console.log(reward);
       }
       setPoints(prev => prev + (Math.ceil((currentWord.word.length * streakMult) * mult)));
       setStreak(prev => prev + 1);
@@ -533,6 +534,7 @@ const handleCheckWord = () => {
         paused={paused}
         timeElapsed={timeElapsed}
         setters={setters}
+        boardCount={boardCount}
       />
       
       <div className="right">
@@ -647,7 +649,8 @@ const MidSection = ({
   animationKey,
   paused,
   timeElapsed,
-  setters
+  setters,
+  boardCount
 }) => {
 
   const formatTime = (timeInSeconds) => {
@@ -664,8 +667,7 @@ const MidSection = ({
 
         {paused && (
           <div className="pause-window">
-            <h1 className="game-title">CROSSWARD (paused)</h1>
-            <p>Time Elapsed: {formatTime(timeElapsed)}</p>
+            <p>CROSSWARD (paused) <br /> Time Elapsed: {formatTime(timeElapsed)} <br /> Total Boards Played: {boardCount}</p>
           </div>
         )}
       
@@ -676,9 +678,10 @@ const MidSection = ({
       )}
 
       
-      {!inShop ? (
         <>
-          <div className="mid-left">
+          <div className="mid-left" style={{
+            display: `${inShop ? "none" : ""}`
+          }}>
             <div className="actions text-3d-left">
 
                 <h1 className="actions-title">
@@ -700,7 +703,7 @@ const MidSection = ({
                 </button>
                 <button 
                   className="crossword-button"
-                  onClick={handleCheckPuzzle}
+                  onClick={() => handleCheckPuzzle(true)}
                 >
                   Check Puzzle
                 </button>
@@ -708,7 +711,9 @@ const MidSection = ({
             </div>
           </div>
           
-          <div className="mid-center">
+          <div className="mid-center" style={{
+            display: `${inShop ? "none" : ""}`
+          }}>
             <div className={`timer-${timer > 5 ? "" : "low"}`}>
               {formatTime(timer)}
             </div>
@@ -744,7 +749,9 @@ const MidSection = ({
           </div>
 
           
-          <div className="mid-right text-3d-right">
+          <div className="mid-right text-3d-right" style={{
+            display: `${inShop ? "none" : ""}`
+          }}>
             <h1 className="display-title">
               STATS
             </h1>
@@ -769,9 +776,7 @@ const MidSection = ({
               {balance} zł
             </div>
           </div>
-
-        </>
-      ) : (
+        
         <Shop 
           inventory={inventory}
           balance={balance}
@@ -785,8 +790,12 @@ const MidSection = ({
           shopList={shopList}
           setShopList={setShopList}
           setters={setters}
+          boardCount={boardCount}
+          inShop={inShop}
         />
-      )}
+
+        </>
+        
     </div>
       
   );
@@ -839,7 +848,6 @@ function LeftMenu({ onNewGame, inGame, pause, paused }) {
 
 // mod is a obj!
 const AddMod = ({mod, setModifiers}) => {
-  console.log(mod);
 
   const newObj = {
     img: mod.img,
@@ -1139,7 +1147,22 @@ function mapToUniqueRandomInt(arr, min, max) {
   return result;
 }
 
-const Shop = ({ inventory, balance, setBalance, setInShop, setInventory, boardCount, initReset, setInitReset, shopCycle, shopList, setShopCycle, setShopList, setters }) => {
+const Shop = ({ 
+  inventory, 
+  balance, 
+  setBalance, 
+  setInShop, 
+  setInventory, 
+  boardCount, 
+  initReset, 
+  setInitReset, 
+  shopCycle,
+  shopList, 
+  setShopCycle, 
+  setShopList, 
+  setters, 
+  inShop 
+}) => {
   const [selectedItem, setSelectedItem] = useState(null);
   
   const shopItems = [...ITEMS];
@@ -1161,12 +1184,11 @@ const Shop = ({ inventory, balance, setBalance, setInShop, setInventory, boardCo
       
     setShopList(resetItems);
     
-    console.log("New cycle:", newCycle);
   };
 
 
   useEffect(() => {
-    if (boardCount % 10 === 0) {
+    if (boardCount % 10 === 0 && boardCount !== 0) {
       resetShopCycle();
       setters.setDialogue("Shop has restocked!");
       setters.setDialogueID(Date.now() * Math.random());
@@ -1176,7 +1198,6 @@ const Shop = ({ inventory, balance, setBalance, setInShop, setInventory, boardCo
 
   useEffect(() => {
     if (!initReset) {
-      console.log("ran")
       setInitReset(true);
       resetShopCycle();
     }
@@ -1186,7 +1207,9 @@ const Shop = ({ inventory, balance, setBalance, setInShop, setInventory, boardCo
   }, []); 
   
   return (
-   <div className="shop-container">
+   <div className="shop-container" style={{
+            display: `${!inShop ? "none" : ""}`
+          }}>
       <div className="shop-items-list">
         <div className="shop-title"> <h2>Shop <strong>[{balance} zł]</strong></h2></div>
         <div className="items-scroll-container">
