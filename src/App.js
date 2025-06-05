@@ -61,10 +61,18 @@ function App() {
 
   const [streakFrozen, setStreakFrozen] = useState(0);
   const [prevStreakFrozen, setPrevStreakFrozen] = useState(streakFrozen);
-  const [highestStreak, setHighestStreak] = useState(0);
+  const [highScores, setHighScores] = useState({
+    streak: 0,
+    balance: 0,
+    reward: 0,
+    mult: 0,
+    lives: 0,
+    livesLost: 0
+  });
 
-  const [lives, setLives] = useState(maxLives);
   const [maxLives, setMaxLives] = useState(5);
+  const [lives, setLives] = useState(maxLives);
+  const [livesLost, setLivesLost] = useState(0);
 
   const correctWordsRef = useRef(correctWords);
 
@@ -88,12 +96,6 @@ function App() {
   useEffect(() => {
     correctWordsRef.current = correctWords
   }, [correctWords])
-
-  useEffect(() => {
-    if (streak !== 0) {
-      setAnimationKey(prev => prev + 1); 
-    }
-  }, [streak]);
 
   useEffect(() => {
     setStreakCol(streak >= 50 ? "streak-50" : streak >= 15 ? "streak-15" : streak >= 5 ? "streak-5" : "");
@@ -142,6 +144,36 @@ function App() {
     });
   } 
 
+  const updateHighScores = (score, amt) => {
+    let newScores = highScores;
+    newScores[score] = amt;
+    setHighScores(newScores);
+  }
+
+  useEffect(() => {
+    if (streak !== 0) {
+      setAnimationKey(prev => prev + 1); 
+    }
+
+    if (streak > highScores.streak) updateHighScores("streak", streak);
+  }, [streak]);
+
+  useEffect(() => {
+    const scores = {
+      "balance": balance, 
+      "reward": reward, 
+      "mult": mult, 
+      "lives": lives
+    }
+
+
+    for (let key in scores) {
+      if (!highScores[key]) return;
+
+      if (highScores[key] < scores[key]) highScores[key] = scores[key];
+    }
+  }, [balance, reward, mult, lives])
+
   const newGame = () => {
     setInGame(true);
 
@@ -150,13 +182,13 @@ function App() {
     }
 
     const timer = setInterval(() => {
-      if (!pausedRef.current) {
-        setTimeElapsed(prev => prev + 1);
+      setTimeElapsed(prev => prev + 1);
         setTime((prevSeconds) => {
-          if (prevSeconds <= 0 && !inShop) {
+          if (prevSeconds <= 0 && !inShop && !pausedRef.current) {
             handleChangePuzzle();
             if (correctWordsRef.current.length === 0) {
-              console.log(correctWords);
+              setLives(prev => prev - 1);
+              setLivesLost(prev => prev + 1)
               if (streakFrozen <= 0) {
                 setStreak(0); 
               } else {
@@ -169,7 +201,6 @@ function App() {
           }
           return prevSeconds > 0 ? prevSeconds - 1 : prevSeconds;
         });
-    }
     }, 1000);
   };
 
@@ -263,11 +294,13 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
         
         totalNewPoints += Math.ceil((word.word.length * streakMult) * mult);
       } else if (!wordComplete && x) {
+          setLives(prev => prev - 1);
+          setLivesLost(prev => prev + 1)
         if (streakFrozen <= 0) {
           setStreak(0);
         } else {
           console.log("frozen");
-          setStreakFrozen(prev => prev - 1)
+          setStreakFrozen(prev => prev - 1 < 0 ? prev : prev - 1)
         }
       }
     }
@@ -366,6 +399,8 @@ const handleCheckWord = () => {
         handleChangePuzzle();
       }
     } else if (!allCellsCorrect) {
+      setLives(prev => prev - 1);
+      setLivesLost(prev => prev + 1)
       if (streakFrozen <= 0) {
         setStreak(0);
       } else {
@@ -569,6 +604,9 @@ const handleCheckWord = () => {
         timeElapsed={timeElapsed}
         setters={setters}
         boardCount={boardCount}
+        lives={lives}
+        highScores={highScores}
+        livesLost={livesLost}
       />
       
       <div className="right">
@@ -684,7 +722,10 @@ const MidSection = ({
   paused,
   timeElapsed,
   setters,
-  boardCount
+  boardCount,
+  lives,
+  highScores,
+  livesLost
 }) => {
 
   const formatTime = (timeInSeconds) => {
@@ -701,7 +742,16 @@ const MidSection = ({
 
         {paused && (
           <div className="pause-window">
-            <p>CROSSWARD (paused) <br /> Time Elapsed: {formatTime(timeElapsed)} <br /> Total Boards Played: {boardCount}</p>
+            <p>CROSSWARD (paused)
+            <br /> Time Elapsed: {formatTime(timeElapsed)} 
+            <br /> Total Boards Played: {boardCount}
+            <br /> Total Lives Lost: {livesLost}
+            <br /> Highest Streak: {highScores.streak}
+            <br /> Highest Balance: {highScores.balance}
+            <br /> Highest Reward Found: {highScores.reward}
+            <br /> Highest Mult: {highScores.mult}
+            <br /> Most Lives: {highScores.lives}
+            </p>
           </div>
         )}
       
@@ -790,6 +840,9 @@ const MidSection = ({
             <h1 className="display-title">
               STATS
             </h1>
+            <div className="lives-display">
+              {lives} LIVES
+            </div>
             <div className="points-display">
               {points} PTS ({multiplier}x)
             </div>
