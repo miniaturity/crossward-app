@@ -2,6 +2,7 @@ import './App.css';
 import { useState, useEffect, useRef, memo, Fragment } from 'react';
 import useWordDB from './WordDB';
 import { ITEMS } from './items';
+// import { ACHIEVEMENTS } from './Ach';
 
 function App() {
   const db = useWordDB();
@@ -21,7 +22,7 @@ function App() {
   const [inGame, setInGame] = useState(false);
 
   const [points, setPoints] = useState(0);
-  const [balance, setBalance] = useState(0);
+  const [balance, setBalance] = useState(999);
   const [inventory, setInventory] = useState([]);
 
   const [time, setTime] = useState(startTime); // seconds (30 def)
@@ -62,7 +63,7 @@ function App() {
   const [prevStreakFrozen, setPrevStreakFrozen] = useState(streakFrozen);
   const [highScores, setHighScores] = useState({
     streak: 0,
-    balance: 0,
+    balance: 999,
     reward: 0,
     mult: 0,
     lives: 0,
@@ -82,7 +83,7 @@ function App() {
     { id: 1, func: function(d) { setPoints(d) }, def: 0 },
     { id: 2, func: function(d) { setLives(d) }, def: 5 },
     { id: 3, func: function(d) { setStartTime(d) }, def: 45 },
-    { id: 4, func: function(d) { setBalance(d) }, def: 0 },
+    { id: 4, func: function(d) { setBalance(d) }, def: 999 },
     { id: 5, func: function(d) { setStreakFrozen(d) }, def: 0 },
     { id: 6, func: function(d) { setTimeElapsed(d) }, def: 0 },
     { id: 7, func: function(d) { setBoardCount(d) }, def: 0 },
@@ -102,6 +103,7 @@ function App() {
     { id: 14, func: function(d) { setPrevStreakFrozen(d) }, def: 0 },
     { id: 15, func: function(d) { setPuzzlesSolved(d) }, def: 0 },
     { id: 16, func: function(d) { setWordsSolved(d) }, def: 0 },
+    { id: 17, func: function(d) { setBoardModifiers(d) }, def: []}
   ];
   const [wordCount, setWordCount] = useState(15);
 
@@ -110,10 +112,11 @@ function App() {
   const tickRef = useRef(tick);
 
   const [livesAnim, setLivesAnim] = useState(1);
+  const [boardModifiers, setBoardModifiers] = useState([]);
 
   useEffect(() => {
     tickRef.current = tick;
-  }, [tick])
+  }, [tick]);
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -252,8 +255,9 @@ function App() {
     if (timerRunning) {
       timer = setInterval(() => {
         setTimeElapsed(prev => prev + 1);
+        if (!pausedRef.current) {
           setTime((prevSeconds) => {
-            if (prevSeconds <= 0 && currentPage !== "shop" && !pausedRef.current) {
+            if (prevSeconds <= 0 && currentPage !== "shop") {
               handleChangePuzzle();
               if (correctWordsRef.current.length === 0) {
                 setLives(prev => prev - 1);
@@ -267,8 +271,10 @@ function App() {
               }
               return startTime;
             }
+            console.log(tickRef.current);
             return prevSeconds > 0 ? prevSeconds - 1 : prevSeconds;
           });
+        }
         }, tickRef.current);
     }
     
@@ -291,7 +297,7 @@ function App() {
 
     let results = [];
     for (let i = 0; i < wordCountRef.current; i++) {
-      const randomLength = getRandomIntInclusive(4, 10);
+      const randomLength = getRandomIntInclusive(4, 8);
       const words = db[randomLength];
       
       const randomIndex = Math.floor(Math.random() * words.length);
@@ -357,7 +363,7 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
           continue;
         }
 
-        wordEmpty = false; // Word has at least one letter filled
+        wordEmpty = false; 
         
         if (currentUserBoard[letterRow][letterCol] !== board[letterRow][letterCol]) {
           wordComplete = false;
@@ -376,7 +382,7 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
         }
         
         totalNewPoints += Math.ceil((word.word.length * streakMult) * mult);
-      } else if (!wordComplete && x && !wordEmpty && hasIncorrectLetter) {
+      } else if (wordComplete && x && !wordEmpty && hasIncorrectLetter) {
         // Only penalize if word is not empty AND has incorrect letters
         setLives(prev => prev - 1);
         setLivesLost(prev => prev + 1)
@@ -428,6 +434,7 @@ const handleCheckWord = () => {
     const newIncorrectCells = [...incorrectCells];
     const newCorrectCells = [...correctCells];
     let allCellsCorrect = true;
+    let wordEmpty = true;
     
     for (let i = 0; i < currentWord.word.length; i++) {
       const letterRow = currentWord.isHorizontal ? currentWord.row : currentWord.row + i;
@@ -439,6 +446,7 @@ const handleCheckWord = () => {
       }
       
       if (userBoard[letterRow][letterCol] !== board[letterRow][letterCol]) {
+        wordEmpty = false;
         allCellsCorrect = false;
         
         if (!newIncorrectCells.some(([r, c]) => r === letterRow && c === letterCol)) {
@@ -482,7 +490,7 @@ const handleCheckWord = () => {
         setPuzzlesSolved(prev => prev + 1)
         handleChangePuzzle();
       }
-    } else if (!allCellsCorrect) {
+    } else if (!allCellsCorrect && !wordEmpty) {
       setLives(prev => prev - 1);
       setLivesLost(prev => prev + 1)
       if (streakFrozen <= 0) {
@@ -619,12 +627,13 @@ const handleCheckWord = () => {
     streakFrozen,
     setWordCount,
     setTick,
+    setLives,
   }
 
   return (
     <div className={`page`}>
       <div className="left">
-        <LeftMenu onNewGame={newGame} inGame={inGame} pause={pause} paused={paused} />
+        <LeftMenu onNewGame={newGame} inGame={inGame} pause={pause} paused={paused} setCurrentPage={setCurrentPage} />
       </div>
 
       <div className="top-clue">
@@ -951,7 +960,7 @@ const MidSection = ({
             <h1 className="display-title">
               STATS
             </h1>
-            <div className={`lives-display ${livesLost !== 0 ? 'lose-life' : ''}`} key={livesAnim}>
+            <div className={`lives-display ${livesLost !== 0 ? 'lose-life' : ''}`}>
                 {lives}x <span><img src="assets/jovial.png" alt="life"/></span>
             </div>
             <div className="points-display">
@@ -1000,12 +1009,12 @@ const MidSection = ({
   );
 };
 
-function LeftMenu({ onNewGame, inGame, pause, paused }) {
+function LeftMenu({ onNewGame, inGame, pause, paused, setCurrentPage }) {
   const [visibleButtons, setVisibleButtons] = useState(0);
   
   useEffect(() => {
     let buttonCount = 0;
-    const menuButtons = ["New Game", "Settings", "Credits", "Pause", "Unpause"];
+    const menuButtons = ["New Game", "Settings", "Credits", "Pause", "Unpause", "Achievements"];
     
     const interval = setInterval(() => {
       buttonCount++;
@@ -1022,7 +1031,8 @@ function LeftMenu({ onNewGame, inGame, pause, paused }) {
   const menuButtons = [
     { name: "New Game", action: onNewGame, disabled: inGame, dependent: !inGame },
     { name: "Pause", action: pause, disabled: !inGame, dependent: inGame && !paused },
-    { name: "Unpause", action: pause, disabled: !inGame, dependent: inGame && paused},
+    { name: "Unpause", action: pause, disabled: !inGame, dependent: inGame && paused },
+    { name: "Achievements", action: () => {setCurrentPage("ach")}, dependent: true }, 
     { name: "Settings", action: () => {}, dependent: true },
     { name: "Credits", action: () => {}, dependent: true },
   ];
@@ -1065,6 +1075,10 @@ const effectsList = ({modifiers, setModifiers}) => {
     reward: "assets/jovial.png",
     rewardChance: "assets/jovial.png",
   }
+
+  /* 
+
+  */
   
 
   return {
@@ -1220,7 +1234,14 @@ const effectsList = ({modifiers, setModifiers}) => {
       apply: ({mod, setTick}) => {
         setTick(mod);
       }
-    }
+    },
+    livesSet: {
+      requires: ["setLives"],
+      apply: ({mod, setLives}) => {
+        setLives(prev => prev + mod)
+      }
+    },
+
   };
 };
 
@@ -1465,7 +1486,7 @@ const Shop = ({
   
   return (
    <div className="shop-container" style={{
-            display: `${currentPage === "game" ? "none" : ""}`
+            display: `${currentPage !== "shop" ? "none" : ""}`
           }}>
       <div className="shop-items-list">
         <div className="shop-title"> <h2>Shop <strong>[{balance} zł]</strong></h2></div>
@@ -1537,6 +1558,20 @@ const Shop = ({
     </div>
   );
 };
+
+// const Achievements = ({ stats }) => {
+//   const ach = ACHIEVEMENTS;
+
+
+
+//   return (
+//     <div className="ach-container" style={{
+//             display: `${currentPage !== "ach" ? "none" : ""}`
+//           }}>
+
+//     </div>
+//   )
+// }
 
 
 function Board({ 

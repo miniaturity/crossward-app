@@ -35,7 +35,7 @@ export const ITEMS = [
         img: "assets/jovial.png",
         content: "slow-60_multSet-1",
         msg: "You played the joker card.",
-        desc: "Balatro...? (+60s time, 1x mult)",
+        desc: "Balatro...? (+60s time, reset mult)",
         cost: 30,
         stock: 2
     },
@@ -43,9 +43,9 @@ export const ITEMS = [
         id: 5,
         name: "celsius",
         img: "assets/jovial.png",
-        content: "slow-5_addStartTime-1",
+        content: "slow-5_addStartTime-5",
         msg: "You drank the celsius, you feel energized..",
-        desc: "Unhealthy energy drink (+5s, +1s start)",
+        desc: "Unhealthy energy drink (+5s, +5s start)",
         cost: 40,
         stock: 5
     },
@@ -128,5 +128,25 @@ export const ITEMS = [
         desc: "cold.. (+1 Streak Freeze)",
         cost: 25,
         stock: 1
+    },
+    {
+        id: 14,
+        name: "peanut butter",
+        img: "assets/jovial.png",
+        content: "livesSet-1",
+        msg: "You feel sticky",
+        desc: "yummy peanut butter (+1 life)",
+        cost: 50,
+        stock: 2
+    },
+    {
+        id: 15,
+        name: "omers curse",
+        img: "assets/jovial.png",
+        content: "tickSet-10_multSet-3",
+        msg: "YOU FEEL OMERS CURSE",
+        desc: "... curse of Omer ... (2x speed, 3x mult)",
+        cost: 5,
+        stock: 1,
     }
 ]

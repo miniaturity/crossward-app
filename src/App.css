@@ -558,7 +558,13 @@ body {
   font-weight: bold;
 }
 
-
+.ach-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  height: 50vh;
+}
 
 .shop-container {
   width: 100%;
