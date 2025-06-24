@@ -321,8 +321,7 @@ function App() {
 
   const handleChangePuzzle = () => {
     setWordCount(20);
-    console.log(ChooseBoardMods({setBoardModifiers, boardCountRef, setters}));
-    setTime(startTimeRef.current);
+    setTime(startTime);
     chooseWords();
     setSelectedCell([]);
     setCurrentClue('HINT');
@@ -728,114 +727,6 @@ const handleCheckWord = () => {
   );
 }
 
-function ChooseBoardMods({ setBoardModifiers, boardCountRef, setters }) {
-  console.log(boardCountRef.current);
-  if (boardCountRef.current < 1) return [];
-  
-  let chosenMods = [];
-  const boardModCount = getRandomIntInclusive(1, 3);
-  const boardMods = [
-    {
-      name: "Speed Up",
-      color: "#f5c542",
-      effect: "setStartTime-minus+15",
-      chance: 30
-    },
-    {
-      name: "Slow Down",
-      color: "#3594f2",
-      effect: "setStartTime-plus+15",
-      chance: 26
-    },
-    {
-      name: "Jackpot",
-      color: "#fffb00",
-      effect: "setReward-plus+7_setRewardChance-0",
-      chance: 7
-    },
-    {
-      name: "Full House",
-      color: "#9cff96",
-      effect: "setWordCount-100",
-      chance: 3
-    },
-    {
-      name: "Empty",
-      color: "#fff",
-      effect: "setWordCount-10",
-      chance: 3,
-    }
-  ];
-
-  const applyMod = (mod) => {
-    setBoardModifiers(prev => [...prev, mod]);
-    const effects = mod.effect.split('_');
-
-    for (let i = 0; i < effects.length; i++) {      
-      const e = effects[i].split('-');
-      const op = e[1].split('+');
-
-      // e[0] is the setter function name
-      // op[0] is the operation type or direct value
-      // op[1] is the numeric value (when operation exists)
-
-      if (op.length === 1) {
-        setters[e[0]](parseInt(op[0]));
-      } else {
-        const value = parseInt(op[1]);
-        switch (op[0]) {
-          case 'plus':
-            setters[e[0]](prev => prev + value);
-            break;
-          case 'minus':
-            setters[e[0]](prev => prev - value);
-            break;
-          default:
-            console.log(`Operation doesn't exist (ChooseBoardMods => applyMod => ${mod.name})`);
-        }
-      }
-    }
-  };
-
-  const totalWeight = boardMods.reduce((sum, mod) => sum + mod.chance, 0);
-
-  // Create a copy of boardMods to avoid selecting the same mod multiple times
-  let availableMods = [...boardMods];
-
-  for (let i = 0; i < boardModCount && availableMods.length > 0; i++) {
-    console.log("Selecting mod", i + 1);
-    
-    const currentTotalWeight = availableMods.reduce((sum, mod) => sum + mod.chance, 0);
-    const random = Math.random() * currentTotalWeight;
-
-    let cumulativeWeight = 0;
-    let selectedIndex = -1;
-    
-    for (let j = 0; j < availableMods.length; j++) {
-      const mod = availableMods[j];
-      cumulativeWeight += mod.chance;
-      if (random <= cumulativeWeight) {
-        chosenMods.push(mod);
-        selectedIndex = j;
-        break;
-      }
-    }
-
-    // Remove the selected mod from available mods to prevent duplicates
-    if (selectedIndex !== -1) {
-      availableMods.splice(selectedIndex, 1);
-    }
-  }
-
-  // Apply all chosen mods
-  for (const mod of chosenMods) {
-    applyMod(mod);
-    console.log(`Mod "${mod.name}" applied`);
-  }
-  
-  console.log("All chosen mods:", chosenMods.map(m => m.name));
-  return chosenMods;
-}
 
 function DialogueBox({ dialogue, img, dialogueID, currDialogue, setCurrDialogue, dialogueVisible, setDialogueVisible }) {
   const timeoutId = useRef(null);
