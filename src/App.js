@@ -1,8 +1,10 @@
 import './App.css';
 import { useState, useEffect, useRef, memo, Fragment, useMemo } from 'react';
+import { useSpring, animated, easings } from '@react-spring/web';
 import useWordDB from './WordDB';
 import { ITEMS } from './items';
 import { Achievements } from './Ach';
+import { Settings } from './Settings';
 // import { ACHIEVEMENTS } from './Ach';
 
 function App() {
@@ -121,23 +123,52 @@ function App() {
   const startTimeRef = useRef(startTime);
 
   const boardCountRef = useRef(boardCount);
+  const currentPageRef = useRef(currentPage);
+
+  const modifiersRef = useRef(modifiers);
+  const [damage, setDamage] = useState(1);
   const scores = useMemo(() => ({
     streak,
     balance, 
     reward, 
     mult, 
     lives, 
-    livesLost, 
+    livesLost,
+    maxLives, 
     puzzlesSolved, 
     wordsSolved, 
     boardCount,
-    points
-  }), [streak, balance, reward, mult, lives, livesLost, puzzlesSolved, wordsSolved, boardCount, points]);
-  const currentPageRef = useRef(currentPage);
+    points,
+    damage
+  }), [streak, balance, reward, mult, lives, livesLost, puzzlesSolved, wordsSolved, boardCount, points, maxLives, damage]);
 
-  const modifiersRef = useRef(modifiers);
+  const [settingsVars, setSettingsVars] = useState([
+    {
+      name: "auto_check",
+      state: false,
+      id: 1
+    },
+    {
+      name: "pause_time",
+      state: true,
+      id: 2
+    },
+    {
+      name: "tester_mode",
+      state: true,
+      id: 3
+    },
+    {
+      name: "debug_mode",
+      state: false,
+      id: 4
+    }
+  ]);
+  const settingsRef = useRef(settingsVars);
 
-  // custom hooks here :3
+  // *
+  // ===== custom hooks here : =====
+  // *
   function useAchievement(condition) {
     const [achieved, setAchieved] = useState(false);
     
@@ -150,10 +181,17 @@ function App() {
     return achieved;
   }
 
+  // *
+  // ===== hooks here :P =====
+  // *
+
   useEffect(() => {
     tickRef.current = tick;
   }, [tick]);
 
+  useEffect(() => {
+    settingsRef.current = settingsVars
+  }, [settingsVars])
   useEffect(() => {
     currentPageRef.current = currentPage;
     if (currentPage !== "game") setCurrentClue("CLUE");
@@ -257,11 +295,16 @@ function App() {
     }
   }, [selectedCell, selectedDirection, placedWords]);
 
+  const getSetting = (n) => {
+    console.log(n)
+    console.log(settingsRef.current)
+    return settingsRef.current.find(s => s.name === n).state
+  }
+
   const clearModTypes = (names) => {
-    names.forEach(name => {
-      console.log(`clearing ${name}`)
-      setModifiers(modifiers.filter(mod => mod.name !== name)) // this was wrong for so long LOL
-    });
+    for (const name of names) 
+      setModifiers(modifiersRef.current.filter(m => m.name !== name));
+    
   } 
 
   const updateHighScores = (score, amt) => {
@@ -311,13 +354,14 @@ function App() {
     if (timerRunning) {
       timer = setInterval(() => {
         setTimeElapsed(prev => prev + 1);
-        if (!pausedRef.current) {
+        if (pausedRef.current && getSetting("pause_time")) return;
+        else {
           setTime((prevSeconds) => {
             if (prevSeconds <= 0 && currentPageRef.current === "game") {
               handleChangePuzzle();
               if (correctWordsRef.current.length === 0) {
-                setLives(prev => prev - 1);
-                setLivesLost(prev => prev + 1)
+                setLives(prev => prev - damage);
+                setLivesLost(prev => prev + damage)
                 if (streakFrozen <= 0) {
                   setStreak(0); 
                 } else {
@@ -437,8 +481,8 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
         totalNewPoints += Math.ceil((word.word.length * streakMult) * mult);
       } else if (wordComplete && x && !wordEmpty && hasIncorrectLetter) {
         // Only penalize if word is not empty AND has incorrect letters
-        setLives(prev => prev - 1);
-        setLivesLost(prev => prev + 1)
+        setLives(prev => prev - damage);
+        setLivesLost(prev => prev + damage)
         if (streakFrozen <= 0) {
           setStreak(0);
         } else {
@@ -544,8 +588,8 @@ const handleCheckWord = () => {
         handleChangePuzzle();
       }
     } else if (!allCellsCorrect && !wordEmpty) {
-      setLives(prev => prev - 1);
-      setLivesLost(prev => prev + 1)
+      setLives(prev => prev - damage);
+      setLivesLost(prev => prev + damage)
       if (streakFrozen <= 0) {
         setStreak(0);
       } else {
@@ -680,6 +724,7 @@ const handleCheckWord = () => {
     setTick,
     setLives,
     setMaxLives,
+    setDamage,
   } // also some misc states/funcs to fix effect applying
 
 
@@ -760,6 +805,8 @@ const handleCheckWord = () => {
         useAchievement={useAchievement}
         scores={scores}
         maxLives={maxLives}
+        settingsVars={settingsVars}
+        setSettingsVars={setSettingsVars}
       />
       
       <div className="right">
@@ -885,8 +932,34 @@ const MidSection = ({
   boardModifiers,
   useAchievement,
   scores,
-  maxLives
+  maxLives,
+  settingsVars,
+  setSettingsVars
 }) => {
+
+  // *
+  // ===== motion here :3 =====
+  // *
+
+  const { number } = useSpring({
+    from: { number: 0 },
+    number: balance,
+    delay: 0,
+    config: { 
+      duration: 1000,
+      easing: easings.easeOutExpo  
+    }, 
+  });
+
+  const { expoNumber } = useSpring({
+    from: { expoNumber: 0 },
+    expoNumber: points,
+    delay: 0,
+    config: { 
+      duration: 2000,
+      easing: easings.easeOutExpo 
+    }, 
+  });
 
   const formatTime = (timeInSeconds) => {
     const minutes = Math.floor(timeInSeconds / 60)
@@ -1026,8 +1099,15 @@ const MidSection = ({
             <div className={`lives-display ${livesLost !== 0 ? 'lose-life' : ''}`}>
                 {lives}/{maxLives} <span><img src="assets/jovial.png" alt="life"/></span>
             </div>
+            <div className="balance-display">
+              <animated.span>
+                {number.to((n) => `${Math.floor(n)} zł`)}
+              </animated.span>
+            </div>
             <div className="points-display">
-              {points} PTS ({multiplier}x)
+              <animated.span>
+                {expoNumber.to((n) => `${Math.floor(n)} PTS`)}
+              </animated.span> {`(${multiplier}x)`}
             </div>
             <div className={`streak-display ${streak !== 0 ? 'streak-update' : ''} ${streakCol}`}
               style={{
@@ -1043,9 +1123,7 @@ const MidSection = ({
             <div className="points-display">
               {puzzlesSolved} Boards Cleared 
             </div>
-            <div className="balance-display">
-              {balance} zł
-            </div>
+            
           </div>
         
         <Shop 
@@ -1063,12 +1141,20 @@ const MidSection = ({
           boardCount={boardCount}
           currentPage={currentPage}
           setCurrentPage={setCurrentPage}
+          number={number}
         />
 
         <Achievements
           scores={scores}
           highScores={highScores}
           useAchievement={useAchievement}
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+        />
+
+        <Settings
+          settings={settingsVars}
+          setSettings={setSettingsVars}
           currentPage={currentPage}
           setCurrentPage={setCurrentPage}
         />
@@ -1106,7 +1192,7 @@ function LeftMenu({ onNewGame, inGame, pause, paused, setCurrentPage }) {
     { name: "Pause", action: pause, disabled: !inGame, dependent: inGame && !paused },
     { name: "Unpause", action: pause, disabled: !inGame, dependent: inGame && paused },
     { name: "Achievements", action: () => {setCurrentPage("ach")}, dependent: true }, 
-    { name: "Settings", action: () => {}, dependent: true },
+    { name: "Settings", action: () => {setCurrentPage("set")}, dependent: true },
     { name: "Credits", action: () => {}, dependent: true },
   ];
   
@@ -1129,7 +1215,6 @@ function LeftMenu({ onNewGame, inGame, pause, paused, setCurrentPage }) {
 }
 
 const AddMod = ({mod, setModifiers, modifiers}) => {
-
   const extractNumericValue = (amtString) => {
     const match = amtString.match(/([+-]?\d+)/);
     return match ? parseInt(match[1]) : 0;
@@ -1157,7 +1242,7 @@ const AddMod = ({mod, setModifiers, modifiers}) => {
       prev.map(m => {if (m.name === mod.name && m.combine) {
           const existingValue = extractNumericValue(m.amt);
           const newValue = extractNumericValue(mod.amt);
-          const suffix = m.amt.includes('%') ? '%' : 's'
+          const suffix = m.amt.includes('%') ? '%' : m.amt.includes('s') ? 's' : ''
           const combinedValue = existingValue + newValue;
           
           return { 
@@ -1354,6 +1439,21 @@ const effectsList = ({modifiers, setModifiers}) => {
       apply: ({mod, setMaxLives}) => {
         setMaxLives(prev => prev + mod);
       }
+    },
+    damageAdd: {
+      requires: ["setDamage"],
+      apply: ({mod, setDamage}) => {
+        const modObj = {
+          name: "▲ damage",
+          img: imgs.rewardChance,
+          amt: `+${mod}`,
+          id: Date.now(),
+          clear: false,
+          combine: true
+        }
+        setDamage(prev => prev + mod);
+        AddMod({mod: modObj, modifiers: modifiers, setModifiers: setModifiers})
+      }
     }
   };
 };
@@ -1456,8 +1556,8 @@ function RightMenu({ inventory, setInventory, setters, modifiers, setModifiers, 
       <div className="menu-section"> 
         <h2 className="section-title">ITEMS</h2>
         <div className="section-content">
-          {inventory.map((item, index) => (
-            <div className="item" key={index}>
+          {inventory.map((item) => (
+            <div className="item" key={item.invid}>
               <button onClick={() => {consumeItem(item)}} disabled={modifiersRef.current.some(m => m.name === item.name) && !item.combine}>
                 <img src={item.img} alt={item.name}></img>
                 <p>{item.name}</p>
@@ -1491,13 +1591,18 @@ const BuyItem = ({ item, inv, bal, setBalance, setInv, id, setCurrentPage }) => 
   const buy = (item) => {
     if (!canBuy) return;
     
+    const invItem = {
+      ...item,
+      invid: Date.now() * Math.random()
+    }
+
     if (item.cost > bal || item.stock <= 0) {
       setCanBuyMap(prev => ({...prev, [item.id]: false}));
       return;
     }
     
     item.stock -= 1;
-    setInv(prev => [...prev, item])
+    setInv(prev => [...prev, invItem])
     setBalance(prev => prev - item.cost);
   }
 
@@ -1552,7 +1657,8 @@ const Shop = ({
   setShopList, 
   setters, 
   setCurrentPage,
-  currentPage
+  currentPage,
+  number
 }) => {
   const [selectedItem, setSelectedItem] = useState(null);
   
@@ -1603,7 +1709,11 @@ const Shop = ({
             display: `${currentPage !== "shop" ? "none" : ""}`
           }}>
       <div className="shop-items-list">
-        <div className="shop-title"> <h2>Shop <strong>[{balance} zł]</strong></h2></div>
+        <div className="shop-title"> <h2>Shop <strong>
+          <animated.span>
+            {number.to((n) => `[${Math.floor(n)} zł]`)}
+          </animated.span>
+          </strong></h2></div>
         <div className="items-scroll-container">
           {shopList.map((item, index) => (
             <div 
@@ -1695,7 +1805,8 @@ function Board({
   onSolvePuzzle,
   inGame,
   correctCells,
-  paused
+  paused,
+  handleCheckWord
 }) {
   const [numberedGrid, setNumberedGrid] = useState([]);
   const boardRef = useRef(null);
@@ -1767,6 +1878,9 @@ function Board({
       else if (e.key === ' ') {
         setSelectedDirection(selectedDirection === 'across' ? 'down' : 'across');
         e.preventDefault();
+      }
+      else if (e.key === 'Enter') {
+        onCheckWord();
       }
       else if (/^[a-zA-Z]$/.test(e.key)) {
         if (correctCells.some(([r, c]) => r === row && c === col)) {

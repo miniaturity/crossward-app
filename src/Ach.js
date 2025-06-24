@@ -6,7 +6,8 @@ export function Achievements({ scores, useAchievement, currentPage, setCurrentPa
   const ach5 = useAchievement(scores.livesLost === 10);
   const ach6 = useAchievement(scores.lives === 9);
   const ach7 = useAchievement(scores.streak === 100);
-  const ach8 = useAchievement(scores.points === 1000000)
+  const ach8 = useAchievement(scores.points === 1000000);
+  const ach9 = useAchievement(scores.maxLives === scores.damage)
 
   // blah blah blah react hooks must be called at the top of the component SHUT UP!!!!!!
 
@@ -66,6 +67,13 @@ export function Achievements({ scores, useAchievement, currentPage, setCurrentPa
       req: ach8,
       icon: "assets/jovial.png",
       id: 8
+    },
+    {
+        name: "Risky Business",
+        desc: "Have damage equal to your max lives.",
+        req: ach9,
+        icon: "assets/jovial.png",
+        id: 9
     }
   ]
 

@@ -171,5 +171,15 @@ export const ITEMS = [
         desc: "legendary apple with regenerative abilities. (+1 max, +3 lives)",
         cost: 240,
         stock: 1,
+    },
+    {
+        id: 18,
+        name: "omers curse",
+        img: "assets/jovial.png",
+        content: "damageAdd-1_multAdd-1",
+        msg: "You feel the wrath.",
+        desc: "Double jeopardy. (+1 dmg, +1 mult)",
+        cost: 80,
+        stock: 1,
     }
 ]
