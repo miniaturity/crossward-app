@@ -1,5 +1,5 @@
 import './App.css';
-import { useState, useEffect, useRef, memo, Fragment } from 'react';
+import { useState, useEffect, useRef, memo, Fragment, useMemo } from 'react';
 import useWordDB from './WordDB';
 import { ITEMS } from './items';
 // import { ACHIEVEMENTS } from './Ach';
@@ -13,7 +13,7 @@ function App() {
   
   const [selectedCell, setSelectedCell] = useState([]);
   const [selectedDirection, setSelectedDirection] = useState('across');
-  const [currentClue, setCurrentClue] = useState('HINT');
+  const [currentClue, setCurrentClue] = useState('CLUE');
   const [currentWordState, setCurrentWordState] = useState('');
   
   const [userBoard, setUserBoard] = useState([[]]);
@@ -63,11 +63,14 @@ function App() {
   const [prevStreakFrozen, setPrevStreakFrozen] = useState(streakFrozen);
   const [highScores, setHighScores] = useState({
     streak: 0,
-    balance: 999,
+    balance: balance,
     reward: 0,
     mult: 0,
     lives: 0,
-    livesLost: 0
+    livesLost: 0,
+    puzzlesSolved: 0,
+    wordsSolved: 0,
+    boardCount: 0,
   });
 
   const [maxLives, setMaxLives] = useState(5);
@@ -93,7 +96,7 @@ function App() {
     { id: 11, func: function(d) { setMult(d) }, def: 1 },
     { id: 12, func: function(d) { setHighScores(d) }, def: {
       streak: 0,
-      balance: 0,
+      balance: balance,
       reward: 0,
       mult: 0,
       lives: 0,
@@ -116,10 +119,39 @@ function App() {
   const startTimeRef = useRef(startTime);
 
   const boardCountRef = useRef(boardCount);
+  const scores = useMemo(() => ({
+    streak,
+    balance, 
+    reward, 
+    mult, 
+    lives, 
+    livesLost, 
+    puzzlesSolved, 
+    wordsSolved, 
+    boardCount
+  }), [streak, balance, reward, mult, lives, livesLost, puzzlesSolved, wordsSolved, boardCount]);
+
+
+  // custom hooks here :3
+  function useAchievement(condition) {
+    const [achieved, setAchieved] = useState(false);
+    
+    useEffect(() => {
+      if (condition && !achieved) {
+        setAchieved(true);
+      }
+    }, [condition, achieved]);
+    
+    return achieved;
+  }
 
   useEffect(() => {
     tickRef.current = tick;
   }, [tick]);
+
+  useEffect(() => {
+    if (currentPage !== "game") setCurrentClue("CLUE");
+  }, [currentPage])
 
   useEffect(() => {
     boardCountRef.current = boardCount;
@@ -268,7 +300,7 @@ function App() {
         setTimeElapsed(prev => prev + 1);
         if (!pausedRef.current) {
           setTime((prevSeconds) => {
-            if (prevSeconds <= 0 && currentPage !== "shop") {
+            if (prevSeconds <= 0 && currentPage == "game") {
               handleChangePuzzle();
               if (correctWordsRef.current.length === 0) {
                 setLives(prev => prev - 1);
@@ -324,7 +356,7 @@ function App() {
     setTime(startTime);
     chooseWords();
     setSelectedCell([]);
-    setCurrentClue('HINT');
+    setCurrentClue('CLUE');
     setIncorrectCells([]);
     setCorrectCells([]);
     setCorrectWords([]);
@@ -711,6 +743,8 @@ const handleCheckWord = () => {
         setCurrentPage={setCurrentPage}
         currentPage={currentPage}
         boardModifiers={boardModifiers}
+        useAchievement={useAchievement}
+        scores={scores}
       />
       
       <div className="right">
@@ -832,7 +866,9 @@ const MidSection = ({
   livesAnim,
   currentPage,
   setCurrentPage,
-  boardModifiers
+  boardModifiers,
+  useAchievement,
+  scores
 }) => {
 
   const formatTime = (timeInSeconds) => {
@@ -1023,12 +1059,114 @@ const MidSection = ({
           setCurrentPage={setCurrentPage}
         />
 
+        <Achievements
+          scores={scores}
+          highScores={highScores}
+          useAchievement={useAchievement}
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+        />
+
         </>
         
     </div>
       
   );
 };
+
+function Achievements({ scores, highScores, useAchievement, currentPage, setCurrentPage }) {
+  const ach1 = useAchievement(scores.puzzlesSolved > 0);
+  const ach2 = useAchievement(scores.puzzlesSolved === 10);
+  const ach3 = useAchievement(scores.puzzlesSolved === 50);
+  const ach4 = useAchievement(scores.livesLost > 0);
+  const ach5 = useAchievement(scores.livesLost === 10);
+  const ach6 = useAchievement(scores.lives === 9)
+
+  // blah blah blah react hooks must be called at the top of the component SHUT UP!!!!!!
+
+  const achievements = [
+    {
+      name: "Clear!",
+      desc: "Clear a board",
+      req: ach1,
+      icon: "assets/jovial.png",
+      id: 1
+    },
+    {
+      name: "Clear!?",
+      desc: "Clear 10 boards",
+      req: ach2,
+      icon: "assets/jovial.png",
+      id: 2
+    },
+    {
+      name: "Clear!!!?",
+      desc: "Clear 50 boards",
+      req: ach3,
+      icon: "assets/jovial.png",
+      id: 3
+    },
+    {
+      name: "First Blood",
+      desc: "Lose a life",
+      req: ach4,
+      icon: "assets/jovial.png",
+      id: 4
+    },
+    {
+      name: "Bloodbath",
+      desc: "Lose 10 lives",
+      req: ach5,
+      icon: "assets/jovial.png",
+      id: 5
+    },
+    {
+      name: "Lucky Cat",
+      desc: "Have 9 lives at once",
+      req: ach6,
+      icon: "assets/jovial.png",
+      id: 6
+    }
+  ]
+
+  // recycling css
+
+  return (
+    <>
+    <div className="ach-container" style={{
+      display: `${currentPage !== "ach" ? "none" : ""}`
+    }}>
+      <div className="ach-items-list">
+        <div className="ach-title"> <h2>Achievements</h2> </div>
+        <div className="items-scroll-container">
+        {achievements.map((a) => {
+          return (
+          <div className="ach-list-item" key={a.id}>
+            <div className="ach-list-item-image">
+              <img src={a.icon} alt={a.name}/>
+                
+                <div className="">
+                  <div className="ach-list-item-name">{a.name}</div>
+                  <div className="ach-list-item-desc">{a.desc} {a.req ? '[✅]' : '[ ]'}</div>
+                </div>
+            </div>
+          </div>
+          );
+        })}
+        </div>
+         <div className="item-buttons">
+              <button
+                className="back-button"
+                onClick={() => {setCurrentPage("game")}}
+              >
+                Back
+              </button>
+          </div>
+      </div>
+    </div>
+    </>
+  );
+}
 
 function LeftMenu({ onNewGame, inGame, pause, paused, setCurrentPage }) {
   const [visibleButtons, setVisibleButtons] = useState(0);
@@ -1580,20 +1718,6 @@ const Shop = ({
     </div>
   );
 };
-
-// const Achievements = ({ stats }) => {
-//   const ach = ACHIEVEMENTS;
-
-
-
-//   return (
-//     <div className="ach-container" style={{
-//             display: `${currentPage !== "ach" ? "none" : ""}`
-//           }}>
-
-//     </div>
-//   )
-// }
 
 
 function Board({ 

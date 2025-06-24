@@ -559,12 +559,78 @@ body {
 }
 
 .ach-container {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  height: 50vh;
+ width: 100%;
+ max-width: 1200px;
+ margin: 0 auto;
+ display: flex;
+ height: 50vh;
+ justify-content: center;
 }
+
+.ach-items-list {
+ width: 45%;
+ display: flex;
+ flex-direction: column;
+}
+
+.ach-title {
+ gap: 5px;
+ padding: 15px;
+ margin: 0;
+ color: #e6e6e6;
+ background-color: #252525;
+ text-align: center;
+}
+
+.ach-title h2 {
+ margin: 0;
+ color: #facc15;
+}
+
+.ach-list-item {
+ display: flex;
+ flex-direction: column;
+ padding: 15px;
+ border-bottom: 1px solid #444444;
+ background-color: #575757;
+ cursor: pointer;
+ min-height: 80px;
+}
+
+.ach-list-item:hover {
+ background-color: #4a4a4a;
+}
+
+.ach-list-item-image {
+ display: flex;
+ align-items: center;
+ margin-bottom: 10px;
+}
+
+.ach-list-item-image img {
+ width: 40px;
+ height: 40px;
+ margin-right: 12px;
+ object-fit: contain;
+}
+
+.ach-list-item-name {
+ color: #fce391;
+ font-weight: 600;
+ font-size: 1.1rem;
+ flex-grow: 1;
+}
+
+.ach-list-item-desc {
+ color: #facc15;
+ font-size: 0.85rem;
+ line-height: 1.4;
+ word-wrap: break-word;
+ hyphens: auto;
+ margin-left: 0;
+}
+
+
 
 .shop-container {
   width: 100%;
@@ -573,6 +639,7 @@ body {
   display: flex;
   height: 50vh;
 }
+
 .shop-items-list {
   width: 35%;
   display: flex;
