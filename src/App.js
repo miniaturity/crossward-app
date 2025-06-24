@@ -2,6 +2,7 @@ import './App.css';
 import { useState, useEffect, useRef, memo, Fragment, useMemo } from 'react';
 import useWordDB from './WordDB';
 import { ITEMS } from './items';
+import { Achievements } from './Ach';
 // import { ACHIEVEMENTS } from './Ach';
 
 function App() {
@@ -129,9 +130,12 @@ function App() {
     livesLost, 
     puzzlesSolved, 
     wordsSolved, 
-    boardCount
-  }), [streak, balance, reward, mult, lives, livesLost, puzzlesSolved, wordsSolved, boardCount]);
+    boardCount,
+    points
+  }), [streak, balance, reward, mult, lives, livesLost, puzzlesSolved, wordsSolved, boardCount, points]);
   const currentPageRef = useRef(currentPage);
+
+  const modifiersRef = useRef(modifiers);
 
   // custom hooks here :3
   function useAchievement(condition) {
@@ -155,7 +159,9 @@ function App() {
     if (currentPage !== "game") setCurrentClue("CLUE");
   }, [currentPage]);
 
-  
+  useEffect(() => {
+    modifiersRef.current = modifiers;
+  }, [modifiers])
 
   useEffect(() => {
     boardCountRef.current = boardCount;
@@ -253,7 +259,8 @@ function App() {
 
   const clearModTypes = (names) => {
     names.forEach(name => {
-      setModifiers(modifiers.filter(mod => mod.name === name))
+      console.log(`clearing ${name}`)
+      setModifiers(modifiers.filter(mod => mod.name !== name)) // this was wrong for so long LOL
     });
   } 
 
@@ -763,6 +770,7 @@ const handleCheckWord = () => {
           modifiers={modifiers}
           setModifiers={setModifiers}
           boardReff={boardReff}
+          modifiersRef={modifiersRef}
         />
       </div>
     </div>
@@ -1072,107 +1080,7 @@ const MidSection = ({
   );
 };
 
-function Achievements({ scores, useAchievement, currentPage, setCurrentPage }) {
-  const ach1 = useAchievement(scores.puzzlesSolved > 0);
-  const ach2 = useAchievement(scores.puzzlesSolved === 10);
-  const ach3 = useAchievement(scores.puzzlesSolved === 50);
-  const ach4 = useAchievement(scores.livesLost > 0);
-  const ach5 = useAchievement(scores.livesLost === 10);
-  const ach6 = useAchievement(scores.lives === 9);
-  const ach7 = useAchievement(scores.streak === 100)
 
-  // blah blah blah react hooks must be called at the top of the component SHUT UP!!!!!!
-
-  const achievements = [
-    {
-      name: "Clear!",
-      desc: "Clear a board",
-      req: ach1,
-      icon: "assets/jovial.png",
-      id: 1
-    },
-    {
-      name: "Clear!?",
-      desc: "Clear 10 boards",
-      req: ach2,
-      icon: "assets/jovial.png",
-      id: 2
-    },
-    {
-      name: "Clear!!!?",
-      desc: "Clear 50 boards",
-      req: ach3,
-      icon: "assets/jovial.png",
-      id: 3
-    },
-    {
-      name: "First Blood",
-      desc: "Lose a life",
-      req: ach4,
-      icon: "assets/jovial.png",
-      id: 4
-    },
-    {
-      name: "Bloodbath",
-      desc: "Lose 10 lives",
-      req: ach5,
-      icon: "assets/jovial.png",
-      id: 5
-    },
-    {
-      name: "Lucky Cat",
-      desc: "Have 9 lives at once",
-      req: ach6,
-      icon: "assets/jovial.png",
-      id: 6
-    },
-    {
-      name: "#100",
-      desc: "Obtain a 100 streak.",
-      req: ach7,
-      icon: "assets/jovial.png",
-      id: 7
-    }
-  ]
-
-  // recycling css
-
-  return (
-    <>
-    <div className="ach-container" style={{
-      display: `${currentPage !== "ach" ? "none" : ""}`
-    }}>
-      <div className="ach-items-list">
-        <div className="ach-title"> <h2>Achievements</h2> </div>
-        <div className="items-scroll-container">
-        {achievements.map((a) => {
-          return (
-          <div className="ach-list-item" key={a.id}>
-            <div className="ach-list-item-image">
-              <img src={a.icon} alt={a.name}/>
-                
-                <div className="">
-                  <div className="ach-list-item-name">{a.name}</div>
-                  <div className="ach-list-item-desc">{a.desc} {a.req ? '[✅]' : '[ ]'}</div>
-                </div>
-            </div>
-          </div>
-          );
-        })}
-        </div>
-         <div className="item-buttons">
-              <button
-                className="back-button"
-                onClick={() => {setCurrentPage("game")}}
-              >
-                Back
-              </button>
-          </div>
-      </div>
-    </div>
-    </>
-  );
-}
 
 function LeftMenu({ onNewGame, inGame, pause, paused, setCurrentPage }) {
   const [visibleButtons, setVisibleButtons] = useState(0);
@@ -1220,17 +1128,49 @@ function LeftMenu({ onNewGame, inGame, pause, paused, setCurrentPage }) {
   );
 }
 
-// mod is a obj!
-const AddMod = ({mod, setModifiers}) => {
+const AddMod = ({mod, setModifiers, modifiers}) => {
+
+  const extractNumericValue = (amtString) => {
+    const match = amtString.match(/([+-]?\d+)/);
+    return match ? parseInt(match[1]) : 0;
+  };
+
+  const formatAmount = (numericValue, suffix = 's') => {
+    const sign = numericValue >= 0 ? '+' : '';
+    return `${sign}${numericValue}${suffix}`;
+  };
+
 
   const newObj = {
     img: mod.img,
     name: mod.name,
     amt: mod.amt,
     clear: mod.clear,
-    id: mod.id
+    id: mod.id,
+    combine: mod.combine,
   }
-  setModifiers(prev => [...prev, newObj])
+
+  if (!modifiers.some(m => m.name === mod.name))
+    setModifiers(prev => [...prev, newObj])
+  else {
+    setModifiers(prev =>
+      prev.map(m => {if (m.name === mod.name && m.combine) {
+          const existingValue = extractNumericValue(m.amt);
+          const newValue = extractNumericValue(mod.amt);
+          const suffix = m.amt.includes('%') ? '%' : 's'
+          const combinedValue = existingValue + newValue;
+          
+          return { 
+            ...m, 
+            amt: formatAmount(combinedValue, suffix),
+            id: mod.id
+          };
+        }
+        return m;
+      })
+    );
+  }
+
 }
 
 
@@ -1262,6 +1202,7 @@ const effectsList = ({modifiers, setModifiers}) => {
           amt: `+$${mod}`,
           id: Date.now(),
           clear: false,
+          combine: false,
         }
         setRewardChance(-1);
         setReward(mod);
@@ -1277,6 +1218,7 @@ const effectsList = ({modifiers, setModifiers}) => {
           amt: `${(10 - mod) * 10}%`,
           id: Date.now(),
           clear: false,
+          combine: false,
         }
         setRewardChance(mod);
         AddMod({mod: modObj, modifiers: modifiers, setModifiers: setModifiers})
@@ -1317,6 +1259,7 @@ const effectsList = ({modifiers, setModifiers}) => {
           amt: `+${mod}s`,
           id: Date.now(),
           clear: false,
+          combine: true
         }
         setStartTime(prev => prev + mod);
         if (mod > 0) AddMod({mod: modObj, modifiers: modifiers, setModifiers: setModifiers})
@@ -1470,9 +1413,10 @@ const ModifierItem = memo(({ mod }) => {
   );
 });
 
-function RightMenu({ inventory, setInventory, setters, modifiers, setModifiers, boardReff }) {
+function RightMenu({ inventory, setInventory, setters, modifiers, setModifiers, boardReff, modifiersRef }) {
 
   const consumeItem = (item) => {
+    if (modifiersRef.current.some(m => m.name === item.modName) && !item.combine) return;
     if (item.msg) {
       const itMsg = item.msg;
       setters.setDialogue(itMsg);
@@ -1488,7 +1432,6 @@ function RightMenu({ inventory, setInventory, setters, modifiers, setModifiers, 
       if (effects[i].split("-")[0] === "na") continue;
 
       mods.push({effect: effects[i].split("-")[0], mod: parseInt(effects[i].split("-")[1])});
-      console.log(`mod ${i} pushed (${item})`)
     }
 
     console.log(CreateMods({
@@ -1515,7 +1458,7 @@ function RightMenu({ inventory, setInventory, setters, modifiers, setModifiers, 
         <div className="section-content">
           {inventory.map((item, index) => (
             <div className="item" key={index}>
-              <button onClick={() => {consumeItem(item)}}>
+              <button onClick={() => {consumeItem(item)}} disabled={modifiersRef.current.some(m => m.name === item.name) && !item.combine}>
                 <img src={item.img} alt={item.name}></img>
                 <p>{item.name}</p>
               </button>
