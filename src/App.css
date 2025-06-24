@@ -705,6 +705,12 @@ body {
   margin-bottom: 4px;
 }
 
+.shop-list-item-name-out {
+  color: #af9e67;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
 .shop-list-item-price {
   color: #facc15;
   font-size: 0.9rem;

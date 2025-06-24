@@ -82,7 +82,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState("game");
 
   const correctWordsRef = useRef(correctWords);
-  const defaultStats = [
+  const [defaultStats, setDefaultStats] = useState([
     { id: 1, func: function(d) { setPoints(d) }, def: 0 },
     { id: 2, func: function(d) { setLives(d) }, def: 5 },
     { id: 3, func: function(d) { setStartTime(d) }, def: 45 },
@@ -106,8 +106,9 @@ function App() {
     { id: 14, func: function(d) { setPrevStreakFrozen(d) }, def: 0 },
     { id: 15, func: function(d) { setPuzzlesSolved(d) }, def: 0 },
     { id: 16, func: function(d) { setWordsSolved(d) }, def: 0 },
-    { id: 17, func: function(d) { setBoardModifiers(d) }, def: []}
-  ];
+    { id: 17, func: function(d) { setBoardModifiers(d) }, def: []},
+    { id: 18, func: function(d) { setInventory(d) }, def: []},
+ ]);
   const [wordCount, setWordCount] = useState(15);
 
   const wordCountRef = useRef(wordCount);
@@ -130,7 +131,7 @@ function App() {
     wordsSolved, 
     boardCount
   }), [streak, balance, reward, mult, lives, livesLost, puzzlesSolved, wordsSolved, boardCount]);
-
+  const currentPageRef = useRef(currentPage);
 
   // custom hooks here :3
   function useAchievement(condition) {
@@ -150,8 +151,11 @@ function App() {
   }, [tick]);
 
   useEffect(() => {
+    currentPageRef.current = currentPage;
     if (currentPage !== "game") setCurrentClue("CLUE");
-  }, [currentPage])
+  }, [currentPage]);
+
+  
 
   useEffect(() => {
     boardCountRef.current = boardCount;
@@ -198,7 +202,9 @@ function App() {
   }, [streak])
 
   useEffect(() => {
+    
     if (lives <= 0) setLost(true);
+    else if (lives > maxLives) setLives(maxLives);
   }, [lives])
 
   const endGame = () => {
@@ -300,7 +306,7 @@ function App() {
         setTimeElapsed(prev => prev + 1);
         if (!pausedRef.current) {
           setTime((prevSeconds) => {
-            if (prevSeconds <= 0 && currentPage == "game") {
+            if (prevSeconds <= 0 && currentPageRef.current === "game") {
               handleChangePuzzle();
               if (correctWordsRef.current.length === 0) {
                 setLives(prev => prev - 1);
@@ -666,6 +672,7 @@ const handleCheckWord = () => {
     setWordCount,
     setTick,
     setLives,
+    setMaxLives,
   } // also some misc states/funcs to fix effect applying
 
 
@@ -745,6 +752,7 @@ const handleCheckWord = () => {
         boardModifiers={boardModifiers}
         useAchievement={useAchievement}
         scores={scores}
+        maxLives={maxLives}
       />
       
       <div className="right">
@@ -868,7 +876,8 @@ const MidSection = ({
   setCurrentPage,
   boardModifiers,
   useAchievement,
-  scores
+  scores,
+  maxLives
 }) => {
 
   const formatTime = (timeInSeconds) => {
@@ -964,17 +973,6 @@ const MidSection = ({
           <div className="mid-center" style={{
             display: `${currentPage !== "game" || lost ? "none" : ""}`
           }}>
-            <div className="board-mods">
-              {boardModifiers.map(
-                mod => {
-                  <div className="board-mod" style={{
-                    color: mod.color
-                  }}>
-                   {mod.name}
-                  </div>
-                }    
-              )}
-            </div>
             <div className={`timer-${timer > 5 ? "" : "low"}`}>
               {formatTime(timer)}
             </div>
@@ -1018,7 +1016,7 @@ const MidSection = ({
               STATS
             </h1>
             <div className={`lives-display ${livesLost !== 0 ? 'lose-life' : ''}`}>
-                {lives}x <span><img src="assets/jovial.png" alt="life"/></span>
+                {lives}/{maxLives} <span><img src="assets/jovial.png" alt="life"/></span>
             </div>
             <div className="points-display">
               {points} PTS ({multiplier}x)
@@ -1074,13 +1072,14 @@ const MidSection = ({
   );
 };
 
-function Achievements({ scores, highScores, useAchievement, currentPage, setCurrentPage }) {
+function Achievements({ scores, useAchievement, currentPage, setCurrentPage }) {
   const ach1 = useAchievement(scores.puzzlesSolved > 0);
   const ach2 = useAchievement(scores.puzzlesSolved === 10);
   const ach3 = useAchievement(scores.puzzlesSolved === 50);
   const ach4 = useAchievement(scores.livesLost > 0);
   const ach5 = useAchievement(scores.livesLost === 10);
-  const ach6 = useAchievement(scores.lives === 9)
+  const ach6 = useAchievement(scores.lives === 9);
+  const ach7 = useAchievement(scores.streak === 100)
 
   // blah blah blah react hooks must be called at the top of the component SHUT UP!!!!!!
 
@@ -1126,6 +1125,13 @@ function Achievements({ scores, highScores, useAchievement, currentPage, setCurr
       req: ach6,
       icon: "assets/jovial.png",
       id: 6
+    },
+    {
+      name: "#100",
+      desc: "Obtain a 100 streak.",
+      req: ach7,
+      icon: "assets/jovial.png",
+      id: 7
     }
   ]
 
@@ -1325,7 +1331,7 @@ const effectsList = ({modifiers, setModifiers}) => {
     whisperer: {
       requires: ["setDialogue", "setDialogueID", "setDialogueVisible", "currentWordState"],
       apply: ({setDialogue, setDialogueID, setDialogueVisible, currentWordState}) => {
-        if (currentWordState) {
+        if (!currentWordState) {
           setDialogue('ion got nothing to tell you. select a word next time..')
           setDialogueID(Date.now() * Math.random());
           setDialogueVisible(true);
@@ -1400,7 +1406,12 @@ const effectsList = ({modifiers, setModifiers}) => {
         setLives(prev => prev + mod)
       }
     },
-
+    maxLivesSet: {
+      requires: ["setMaxLives"],
+      apply: ({mod, setMaxLives}) => {
+        setMaxLives(prev => prev + mod);
+      }
+    }
   };
 };
 
@@ -1655,7 +1666,9 @@ const Shop = ({
             <div 
               key={index}
               className={`shop-list-item ${selectedItem === item ? 'selected' : ''}`}
-              onClick={() => handleSelectItem(item)}
+              onClick={() => {
+                if (item.stock > 0) handleSelectItem(item)
+              }}
             >
 
               <div className="shop-list-item-image">
@@ -1663,7 +1676,7 @@ const Shop = ({
               </div>
 
               <div className="shop-list-item-details">
-                <div className="shop-list-item-name">{item.name} ({item.stock})</div>
+                <div className={`shop-list-item-name${item.stock > 0 ? '' : '-out'}`}>{item.name} ({item.stock})</div>
                 <div className="shop-list-item-price">{item.cost} zł</div>
               </div>
             </div>

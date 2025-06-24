@@ -73,7 +73,7 @@ export const ITEMS = [
         id: 8,
         name: "super duper root beer",
         img: "assets/jovial.png",
-        content: "addStartTime-60",
+        content: "addStartTime-60_multAdd-3_livesSet-99",
         msg: "glup super super super",
         desc: "Super root beer (???)",
         cost: 9999,
@@ -141,12 +141,32 @@ export const ITEMS = [
     },
     {
         id: 15,
-        name: "omers curse",
+        name: "sandwich",
         img: "assets/jovial.png",
-        content: "tickSet-10_multSet-3",
-        msg: "YOU FEEL OMERS CURSE",
-        desc: "... curse of Omer ... (2x speed, 3x mult)",
-        cost: 5,
+        content: "livesSet-2",
+        msg: "yummers",
+        desc: "filling tuna sandwich (+2 lives)",
+        cost: 115,
+        stock: 1
+    },
+    {
+        id: 16,
+        name: "golden apple",
+        img: "assets/jovial.png",
+        content: "maxLivesSet-1",
+        msg: "nom nom nom :D",
+        desc: "enchanted apple that grants more health (+1 max lives)",
+        cost: 130,
+        stock: 1
+    },
+    {
+        id: 17,
+        name: "enchanted golden apple",
+        img: "assets/jovial.png",
+        content: "maxLivesSet-1_livesSet-3",
+        msg: "chomp",
+        desc: "legendary apple with regenerative abilities. (+1 max, +3 lives)",
+        cost: 240,
         stock: 1,
     }
 ]
