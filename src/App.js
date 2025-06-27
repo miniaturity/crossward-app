@@ -5,7 +5,17 @@ import useWordDB from './WordDB';
 import { ITEMS } from './items';
 import { Achievements } from './Ach';
 import { Settings } from './Settings';
-// import { ACHIEVEMENTS } from './Ach';
+
+/*
+  TODO:
+  make achievements look better
+  create point up indicator
+  create money up indicator
+  moar animations
+
+*/
+
+
 
 function App() {
   const db = useWordDB();
@@ -166,6 +176,9 @@ function App() {
   ]);
   const settingsRef = useRef(settingsVars);
 
+  const [status, setStatus] = useState(null);
+
+
   // *
   // ===== custom hooks here : =====
   // *
@@ -225,6 +238,15 @@ function App() {
       setPrevStreakFrozen(streakFrozen);
     }
   }, [streakFrozen]);
+
+  useEffect(() => {
+    if (!status) return;
+    const timeout = setTimeout(() => {
+      setStatus(null);
+    }, 3000);
+
+    return () => {clearTimeout(timeout)};
+  }, [status])
 
   useEffect(() => {
     boardReff.current = board;
@@ -296,8 +318,6 @@ function App() {
   }, [selectedCell, selectedDirection, placedWords]);
 
   const getSetting = (n) => {
-    console.log(n)
-    console.log(settingsRef.current)
     return settingsRef.current.find(s => s.name === n).state
   }
 
@@ -486,7 +506,6 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
         if (streakFrozen <= 0) {
           setStreak(0);
         } else {
-          console.log("frozen");
           setStreakFrozen(prev => prev - 1 < 0 ? prev : prev - 1)
         }
       }
@@ -501,6 +520,14 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
         setWordsSolved(prev => prev + totalNewWords);
         setPoints(prev => prev + totalNewPoints);
         setBalance(prev => prev + totalNewBalance);
+
+        const chosenStatus = ChooseStatus({
+          reward: totalNewBalance,
+          streak: streak,
+          pointsGiven: totalNewPoints,
+        })
+
+        setStatus(chosenStatus);
         setStreak(prev => prev + totalNewWords);
         setCorrectWords(newCorrectWords);
       }
@@ -522,9 +549,11 @@ const handleCheckWord = () => {
     if (selectedCell.length === 0) return;
 
     const giveReward = getRandomIntInclusive(1, 10);
+    const oppositeDirection = selectedDirection === 'across' ? 'down' : 'across';
   
     const [row, col] = selectedCell;
-    const currentWord = findWordAtPosition(row, col, selectedDirection);
+    const wrd = findWordAtPosition(row, col, selectedDirection)
+    const currentWord = wrd ? wrd : findWordAtPosition(row, col, oppositeDirection);
     
     if (!currentWord || correctWords.includes(currentWord)) return;
     
@@ -572,15 +601,27 @@ const handleCheckWord = () => {
     
     
     if (allCellsCorrect && currentWord && !correctWords.includes(currentWord.word)) {
+      // CORRECT WORD
+      let isReward = giveReward > rewardChance;
+      let ptsReward = Math.ceil((currentWord.word.length * streakMult) * mult)
       const newCorrectWords = [...correctWords];
       newCorrectWords.push(currentWord.word);
       setWordsSolved(prev => prev + 1);
-      if (giveReward > rewardChance) {
+      if (isReward) {
         setBalance(prev => prev + reward)
       }
-      setPoints(prev => prev + (Math.ceil((currentWord.word.length * streakMult) * mult)));
+      setPoints(prev => prev + ptsReward);
       setStreak(prev => prev + 1);
       setCorrectWords(newCorrectWords);
+
+      const chosenStatus = ChooseStatus({
+        reward: isReward ? reward : 0, 
+        streak: streak,
+        pointsGiven: ptsReward
+      })
+      console.log(chosenStatus);
+      setStatus(chosenStatus);
+
       if (handleCheckPuzzle(false)) {
         setPoints(prev => prev + (Math.ceil(((20 * newCorrectWords.length) * streakMult) * mult)));
         setBalance(prev => prev + (reward * mult));
@@ -588,12 +629,12 @@ const handleCheckWord = () => {
         handleChangePuzzle();
       }
     } else if (!allCellsCorrect && !wordEmpty) {
+      // INCORRECT WORD
       setLives(prev => prev - damage);
       setLivesLost(prev => prev + damage)
       if (streakFrozen <= 0) {
         setStreak(0);
       } else {
-        console.log("frozen");
         setStreakFrozen(prev => prev - 1)
       }
     }
@@ -731,11 +772,7 @@ const handleCheckWord = () => {
   return (
     <div className={`page`}>
       <div className="left">
-        <LeftMenu onNewGame={newGame} inGame={inGame} pause={pause} paused={paused} setCurrentPage={setCurrentPage} />
-      </div>
-
-      <div className="top-clue">
-        {currentClue}
+        <LeftMenu onNewGame={newGame} inGame={inGame} pause={pause} paused={paused} setCurrentPage={setCurrentPage} handleChangePuzzle={handleChangePuzzle}/>
       </div>
       
       <MidSection 
@@ -807,6 +844,7 @@ const handleCheckWord = () => {
         maxLives={maxLives}
         settingsVars={settingsVars}
         setSettingsVars={setSettingsVars}
+        status={status}
       />
       
       <div className="right">
@@ -823,6 +861,77 @@ const handleCheckWord = () => {
     </div>
   );
 }
+
+function ChooseStatus({ reward, streak, pointsGiven }) {
+  const statuses = [
+    {
+      text: "Nice one!",
+      req: 0,
+      color: "#60f542",
+      style: null
+    },
+    {
+      text: "Great!",
+      req: 0,
+      color: "#faf62d",
+      style: null
+    },
+    {
+      text: "Perfect!",
+      req: 0,
+      color: "#f032e3",
+      style: null
+    },
+    {
+      text: "Godlike!",
+      req: streak >= 333,
+      color: "#fff",
+      style: null
+    },
+    {
+      text: "Impressive!",
+      req: streak === 15,
+      color: null,
+      style: "s-impressive"
+    },
+    {
+      text: "Keep it up!",
+      req: streak === 30,
+      color: null,
+      style: "s-keep"
+    },
+    {
+      text: "Jackpot!",
+      req: reward >= 77,
+      color: null,
+      style: "s-jackpot"
+    },
+    {
+      text: "Sick!",
+      req: pointsGiven > 15,
+      color: null,
+      style: "s-sick"
+    },
+    
+  ]
+
+  let pool = [];
+  let override = null;
+
+  for (const s of statuses) {
+    if (s.req === true) {
+      override = s;
+      break;
+    } else if (s.req === 0) { 
+      pool.push(s);
+    }
+  }
+   
+
+  const choice = getRandomIntInclusive(0, pool.length - 1);
+  return override === null ? pool[choice] : override;
+} 
+
 
 
 function DialogueBox({ dialogue, img, dialogueID, currDialogue, setCurrDialogue, dialogueVisible, setDialogueVisible }) {
@@ -934,7 +1043,9 @@ const MidSection = ({
   scores,
   maxLives,
   settingsVars,
-  setSettingsVars
+  setSettingsVars,
+  currentClue,
+  status
 }) => {
 
   // *
@@ -1034,6 +1145,7 @@ const MidSection = ({
                 > 
                   Shop 
                 </button>
+  
                 <button 
                   className="crossword-button"
                   onClick={handleCheckWord}
@@ -1078,6 +1190,20 @@ const MidSection = ({
               inGame={inGame}
               paused={paused}
             />
+            <div className="column">
+              <div className={`events`}>
+                {currentClue}
+              </div>
+              <div 
+                className={`out ${status?.style || ''}`}
+                style={{
+                  visibility: status ? 'visible' : 'hidden',
+                  color: status?.color
+                }}
+              >
+                {status?.text || 'Nothings here.'}
+              </div>
+            </div>
             <DialogueBox 
               dialogue={dialogue}
               img={dialogueImg}
@@ -1159,6 +1285,8 @@ const MidSection = ({
           setCurrentPage={setCurrentPage}
         />
 
+       
+
         </>
         
     </div>
@@ -1167,24 +1295,13 @@ const MidSection = ({
 };
 
 
-
-function LeftMenu({ onNewGame, inGame, pause, paused, setCurrentPage }) {
+function LeftMenu({ onNewGame, inGame, pause, paused, setCurrentPage, handleChangePuzzle }) {
   const [visibleButtons, setVisibleButtons] = useState(0);
   
   useEffect(() => {
-    let buttonCount = 0;
     const menuButtons = ["New Game", "Settings", "Credits", "Pause", "Unpause", "Achievements"];
     
-    const interval = setInterval(() => {
-      buttonCount++;
-      setVisibleButtons(buttonCount);
-      
-      if (buttonCount >= menuButtons.length) {
-        clearInterval(interval);
-      }
-    }, 5); 
-    
-    return () => clearInterval(interval);
+    setVisibleButtons(menuButtons.length);
   }, []);
 
   const menuButtons = [
@@ -1785,7 +1902,7 @@ const Shop = ({
   );
 };
 
-
+  
 function Board({ 
   board, 
   userBoard,
@@ -1845,7 +1962,9 @@ function Board({
         e.preventDefault();
       } 
       else if (e.key === 'Backspace') {
-        if (correctCells.some(([r, c]) => r === row && c === col)) {
+        const prevCell = getAdjacentCell(row, col, selectedDirection, -1);
+        const [prevRow, prevCol] = prevCell;
+        if (correctCells.some(([r, c]) => r === row && c === col || correctCells.some(([r, c]) => r === prevRow && c === prevCol))) {
           return;
         }
         if (userBoard[row][col]) {
@@ -1858,9 +1977,7 @@ function Board({
             setIncorrectCells(newIncorrectCells);
           }
         } else {
-          const prevCell = getAdjacentCell(row, col, selectedDirection, -1);
           if (prevCell) {
-            const [prevRow, prevCol] = prevCell;
             const newUserBoard = [...userBoard];
             newUserBoard[prevRow][prevCol] = '';
             setUserBoard(newUserBoard);
