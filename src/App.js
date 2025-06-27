@@ -9,11 +9,10 @@ import { Settings } from './Settings';
 /*
   TODO:
   make achievements look better
-  create point up indicator
-  create money up indicator
   moar animations
+  sound?
 
-*/
+  */
 
 
 
@@ -177,6 +176,7 @@ function App() {
   const settingsRef = useRef(settingsVars);
 
   const [status, setStatus] = useState(null);
+  const [finalMult, setFinalMult] = useState(1);
 
 
   // *
@@ -498,9 +498,16 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
           totalNewBalance += reward;
         }
         
-        totalNewPoints += Math.ceil((word.word.length * streakMult) * mult);
+        totalNewPoints += Math.ceil(((word.word.length * streakMult) * mult) * finalMult);
       } else if (wordComplete && x && !wordEmpty && hasIncorrectLetter) {
         // Only penalize if word is not empty AND has incorrect letters
+        const chosenStatus = ChooseStatus({
+          reward: null, 
+          streak: streak,
+          pointsGiven: null,
+          livesLost: damage,
+        })
+        setStatus(chosenStatus);
         setLives(prev => prev - damage);
         setLivesLost(prev => prev + damage)
         if (streakFrozen <= 0) {
@@ -525,6 +532,7 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
           reward: totalNewBalance,
           streak: streak,
           pointsGiven: totalNewPoints,
+          livesLost: null,
         })
 
         setStatus(chosenStatus);
@@ -535,7 +543,7 @@ const handleCheckPuzzle = (x, customUserBoard = null) => {
 
     if (newCorrectWords.length === placedWords.length) {
       if (x) {
-        setPoints(prev => prev + (Math.ceil(((20 * newCorrectWords.length) * streakMult) * mult)));
+        setPoints(prev => prev + (Math.ceil((((20 * newCorrectWords.length) * streakMult) * mult) * finalMult)));
         setBalance(prev => prev + (reward * mult));
         setPuzzlesSolved(prev => prev + 1);
         handleChangePuzzle();
@@ -603,7 +611,7 @@ const handleCheckWord = () => {
     if (allCellsCorrect && currentWord && !correctWords.includes(currentWord.word)) {
       // CORRECT WORD
       let isReward = giveReward > rewardChance;
-      let ptsReward = Math.ceil((currentWord.word.length * streakMult) * mult)
+      let ptsReward = Math.ceil((currentWord.word.length * streakMult) * mult) * finalMult
       const newCorrectWords = [...correctWords];
       newCorrectWords.push(currentWord.word);
       setWordsSolved(prev => prev + 1);
@@ -617,7 +625,8 @@ const handleCheckWord = () => {
       const chosenStatus = ChooseStatus({
         reward: isReward ? reward : 0, 
         streak: streak,
-        pointsGiven: ptsReward
+        pointsGiven: ptsReward,
+        livesLost: null,
       })
       console.log(chosenStatus);
       setStatus(chosenStatus);
@@ -630,6 +639,13 @@ const handleCheckWord = () => {
       }
     } else if (!allCellsCorrect && !wordEmpty) {
       // INCORRECT WORD
+      const chosenStatus = ChooseStatus({
+        reward: null, 
+        streak: streak,
+        pointsGiven: null,
+        livesLost: damage,
+      })
+      setStatus(chosenStatus);
       setLives(prev => prev - damage);
       setLivesLost(prev => prev + damage)
       if (streakFrozen <= 0) {
@@ -651,7 +667,7 @@ const handleCheckWord = () => {
     for (let i = 0; i < placedWords.length; i++)
       sum += placedWords[i].word.length;
 
-    setPoints(prev => prev + (Math.ceil((sum * streakMult) * mult)));
+    setPoints(prev => prev + ((Math.ceil((sum * streakMult) * mult) * finalMult)));
     setStreak(prev => prev + 1)
     setPuzzlesSolved(prev => prev + 1);
     setCorrectWords(placedWords);
@@ -862,55 +878,91 @@ const handleCheckWord = () => {
   );
 }
 
-function ChooseStatus({ reward, streak, pointsGiven }) {
+function ChooseStatus({ reward, streak, pointsGiven, livesLost }) {
   const statuses = [
+    {
+      name: "X_X",
+      req: livesLost > 2,
+      coolor: "#000",
+      style: null,
+      pool: "hurt"
+    },
+    {
+      name: "That hurt!",
+      req: livesLost === 2,
+      color: "#80251f",
+      style: null,
+      pool: "hurt"
+    },
+    {
+      text: "Ouch..",
+      req: 0,
+      color: "#b8342a",
+      style: null,
+      pool: "hurt"
+    },
+    {
+      text: "Ow!",
+      req: 0,
+      color: "#b8342a",
+      style: null,
+      pool: "hurt"
+    },
     {
       text: "Nice one!",
       req: 0,
       color: "#60f542",
-      style: null
+      style: null,
+      pool: "good"
     },
     {
       text: "Great!",
       req: 0,
       color: "#faf62d",
-      style: null
+      style: null,
+      pool: "good"
     },
     {
       text: "Perfect!",
       req: 0,
       color: "#f032e3",
-      style: null
+      style: null,
+      pool: "good"
     },
     {
       text: "Godlike!",
       req: streak >= 333,
       color: "#fff",
-      style: null
+      style: null,
+      pool: "good"
     },
     {
       text: "Impressive!",
       req: streak === 15,
       color: null,
-      style: "s-impressive"
+      style: "s-impressive",
+      pool: "good"
     },
     {
       text: "Keep it up!",
       req: streak === 30,
       color: null,
-      style: "s-keep"
+      style: "s-keep",
+      pool: "good"
     },
     {
       text: "Jackpot!",
       req: reward >= 77,
       color: null,
-      style: "s-jackpot"
+      style: "s-jackpot",
+      pool: "good"
     },
     {
       text: "Sick!",
       req: pointsGiven > 15,
       color: null,
-      style: "s-sick"
+      style: "s-sick",
+      pool: "good"
     },
     
   ]
@@ -919,17 +971,33 @@ function ChooseStatus({ reward, streak, pointsGiven }) {
   let override = null;
 
   for (const s of statuses) {
-    if (s.req === true) {
-      override = s;
-      break;
-    } else if (s.req === 0) { 
-      pool.push(s);
+    if (s.pool === "good") {
+      if (s.req === true) {
+        override = s;
+        break;
+      } else if (s.req === 0) { 
+        pool.push(s);
+        continue;
+      }
+    } else if (s.pool === "hurt") {
+      if (s.req === true) {
+        override = s;
+        break;
+      } else if (s.req === 0) { 
+        pool.push(s);
+        continue;
+      }
     }
   }
    
 
   const choice = getRandomIntInclusive(0, pool.length - 1);
-  return override === null ? pool[choice] : override;
+  let chosen = override === null ? pool[choice] : override
+  let pos = `${reward ? ` +${reward} zł /` : ''}${` +${pointsGiven} pts`}`;
+  let neg = ` -${livesLost} live${livesLost > 1 ? `s` : ``}`;
+  chosen.text = `${chosen.text} /${livesLost ? neg : pos}`;
+  
+  return chosen;
 } 
 
 
@@ -1741,7 +1809,7 @@ const BuyItem = ({ item, inv, bal, setBalance, setInv, id, setCurrentPage }) => 
       </button>
     </div>
   );
-}
+};
 
 function mapToUniqueRandomInt(arr, min, max) {
   if (max - min + 1 < arr.length) {
@@ -1832,7 +1900,7 @@ const Shop = ({
           </animated.span>
           </strong></h2></div>
         <div className="items-scroll-container">
-          {shopList.map((item, index) => (
+          {shopList.sort((a, b) => a.cost - b.cost).map((item, index) => (
             <div 
               key={index}
               className={`shop-list-item ${selectedItem === item ? 'selected' : ''}`}
@@ -1963,8 +2031,8 @@ function Board({
       } 
       else if (e.key === 'Backspace') {
         const prevCell = getAdjacentCell(row, col, selectedDirection, -1);
-        const [prevRow, prevCol] = prevCell;
-        if (correctCells.some(([r, c]) => r === row && c === col || correctCells.some(([r, c]) => r === prevRow && c === prevCol))) {
+    
+        if (correctCells.some(([r, c]) => r === row && c === col)) {
           return;
         }
         if (userBoard[row][col]) {
@@ -1978,6 +2046,7 @@ function Board({
           }
         } else {
           if (prevCell) {
+            const [prevRow, prevCol] = prevCell;
             const newUserBoard = [...userBoard];
             newUserBoard[prevRow][prevCol] = '';
             setUserBoard(newUserBoard);
@@ -2034,8 +2103,9 @@ function Board({
         } else {
           const currentWord = findWordAtPosition(row, col, selectedDirection);
           if (currentWord) {
-            const nextWord = findNextWord(currentWord);
+            let nextWord = findNextWord(currentWord);
             if (nextWord) {
+              if (correctCells.some(([r, c]) => r === nextWord.row && c === nextWord.col)) nextWord = findNextWord(nextWord);
               setSelectedCell([nextWord.row, nextWord.col]);
               setSelectedDirection(nextWord.isHorizontal ? 'across' : 'down');
             }
