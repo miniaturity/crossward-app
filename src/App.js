@@ -154,6 +154,8 @@ function App() {
     damage
   }), [streak, balance, reward, mult, lives, livesLost, puzzlesSolved, wordsSolved, boardCount, points, maxLives, damage]);
 
+  const [events, setEvents] = useState([]);
+
   const [settingsVars, setSettingsVars] = useState([
     {
       name: "auto_check",
@@ -432,6 +434,7 @@ function App() {
   };
 
   const handleChangePuzzle = () => {
+    console.log(startTime);
     setWordCount(20);
     setTime(startTime);
     chooseWords();
@@ -631,7 +634,6 @@ const handleCheckWord = () => {
         pointsGiven: ptsReward,
         livesLost: null,
       })
-      console.log(chosenStatus);
       setStatus(chosenStatus);
 
       if (handleCheckPuzzle(false)) {
@@ -884,14 +886,14 @@ const handleCheckWord = () => {
 function ChooseStatus({ reward, streak, pointsGiven, livesLost }) {
   const statuses = [
     {
-      name: "X_X",
+      text: "X_X",
       req: livesLost > 2,
-      coolor: "#000",
+      color: "#000",
       style: null,
       pool: "hurt"
     },
     {
-      name: "That hurt!",
+      text: "That hurt!",
       req: livesLost === 2,
       color: "#80251f",
       style: null,
@@ -941,14 +943,14 @@ function ChooseStatus({ reward, streak, pointsGiven, livesLost }) {
     },
     {
       text: "Impressive!",
-      req: streak === 15,
+      req: streak >= 15,
       color: null,
       style: "s-impressive",
       pool: "good"
     },
     {
       text: "Keep it up!",
-      req: streak === 30,
+      req: streak >= 30,
       color: null,
       style: "s-keep",
       pool: "good"
@@ -966,43 +968,38 @@ function ChooseStatus({ reward, streak, pointsGiven, livesLost }) {
       color: null,
       style: "s-sick",
       pool: "good"
-    },
-    
-  ]
+    }
+  ];
 
   let pool = [];
   let override = null;
-  let chosenPool = livesLost ? "hurt" : "good"
+  let chosenPool = livesLost > 0 ? "hurt" : "good";
 
   for (const s of statuses) {
-    if (chosenPool === "good") {
-      if (s.req === true) {
-        override = s;
-        break;
-      } else if (s.req === 0) { 
-        pool.push(s);
-        continue;
-      }
-    } else if (chosenPool === "hurt") {
-      if (s.req === true) {
-        override = s;
-        break;
-      } else if (s.req === 0) { 
-        pool.push(s);
-        continue;
-      }
+    if (s.pool !== chosenPool) continue;
+    
+    if (s.req !== 0 && s.req) {
+      override = s;
+      break;
+    } else if (s.req === 0) { 
+      pool.push(s);
     }
   }
-   
+
+  // Helper function - you'll need to implement this or import it
+  function getRandomIntInclusive(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
 
   const choice = getRandomIntInclusive(0, pool.length - 1);
-  let chosen = override === null ? pool[choice] : override
+  let chosen = override || pool[choice];
+  
   let pos = `${reward ? ` +${reward} zł /` : ''}${` +${pointsGiven} pts`}`;
   let neg = ` -${livesLost} li${livesLost > 1 ? `v` : `f`}e${livesLost > 1 ? `s` : ``}`;
-  chosen.text = `${chosen.text} /${livesLost ? neg : pos}`;
+  chosen.text = `${chosen.text} /${livesLost > 0 ? neg : pos}`;
   
   return chosen;
-} 
+}
 
 
 
@@ -1217,6 +1214,13 @@ const MidSection = ({
                 > 
                   Shop 
                 </button>
+
+                <button 
+                  className="crossword-button"
+                  onClick={() => {setCurrentPage("crf")}}
+                > 
+                  Crafting 
+                </button>
   
                 <button 
                   className="crossword-button"
@@ -1357,6 +1361,12 @@ const MidSection = ({
           setCurrentPage={setCurrentPage}
         />
 
+        <CraftMenu
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+          inventory={inventory}
+          setInventory={setInventory}
+        />
        
 
         </>
@@ -1373,7 +1383,7 @@ function CraftMenu({ currentPage, setCurrentPage, inventory, setInventory }) {
   const isCraftable = (recipe) => {
     const parsedRecipe = recipe.recipe.split('_');
     let items = [];
-    parsedRecipe.foreach((i) => {
+    parsedRecipe.forEach((i) => {
       items.push(ITEMS.find(item => item.name === i));
     });
 
@@ -1434,14 +1444,113 @@ function CraftMenu({ currentPage, setCurrentPage, inventory, setInventory }) {
     setInventory(prev => [...prev, CRAFTABLEITEMS.find(i => i.name === recipe.name)])
   }
 
+  const CraftItem = (item) => {
+    return (
+      <div className="item-buttons">
+        <button 
+          className="buy-button" 
+          disabled={!canCraft}
+          onClick={() => {craft(item)}}
+          id={item.id}
+        >
+          Craft
+        </button>
+        <button
+          className="back-button"
+          onClick={() => {setCurrentPage("game")}}
+        >
+          Back
+        </button>
+    </div>
+    )
+  }
+
+  const formatRecipe = (recipe) => {
+    const itemsInRecipe = recipe.recipe.split('_');
+    const iCount = {}
+    itemsInRecipe.forEach((item) => {
+      iCount[item] = iCount[item] ? iCount[item] + 1 : 1;
+    })
+    const formattedItems = Object.keys(iCount).map((key) => {
+      return iCount[key] > 1 ? `${key} x${iCount[key]}` : `${key}`
+    });
+    return formattedItems.join(", ");
+  }
+
   useEffect(() => {
-    setCanCraft(isCraftable(selectedCraft));
+    setCanCraft(selectedCraft ? isCraftable(selectedCraft) : false);
   }, [selectedCraft]);
   
   return (
     <>
-      <div className="shop-container">
+      <div className="shop-container" style={{
+        display: `${currentPage !== "crf" ? "none" : ""}`
+      }}>
+        <div className="shop-items-list">
+          <div className="shop-title"><h1>Crafts</h1></div>
+          <div className="items-scroll-container">
+            {CRAFTS.map((craft, index) => (
+              <div
+                key={`${index}`}
+                className={`shop-list-item ${selectedCraft === craft ? 'selected' : ''}`}
+                onClick={() => {
+                  setSelectedCraft(craft);
+                }}
+              >
+                <div className="shop-list-item-image">
+                  <img src={craft.img} alt={craft.name} />
+                </div>
 
+                <div className="shop-list-item-details">
+                  <div className={`shop-list-item-name${isCraftable(craft) ? '' : '-out'}`}>{craft.name}</div>
+                  <div className="craft-list-item-recipe">{formatRecipe(craft)}</div>
+                </div>
+                
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="shop-item-detail">
+        {selectedCraft ? (
+          <>
+            <div className="detail-image-container">
+              <img 
+                src={selectedCraft.img} 
+                alt={selectedCraft.name} 
+                className="detail-image" 
+              />
+            </div>
+            <div className="detail-info">
+              <h2 className="detail-name">{selectedCraft.name}</h2>
+              <div className="detail-price">{formatRecipe(selectedCraft)}</div>
+              <div className="detail-description">
+                {CRAFTABLEITEMS.find(item => item.name === selectedCraft.name).desc || "No description available for this item."}
+              </div>
+
+              <CraftItem 
+                item={selectedCraft}
+              />
+
+            </div>
+          </>
+        ) : (
+          <div className="detail-info">
+            <div className="detail-description">
+            Select an item to view details
+
+            <div className="item-buttons">
+              <button
+                className="back-button"
+                onClick={() => {setCurrentPage("game")}}
+              >
+                Back
+              </button>
+            </div>
+            </div>
+          </div>
+        )}
+      </div>
       </div>
     </>
   );

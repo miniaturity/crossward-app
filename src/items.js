@@ -9,7 +9,7 @@ export const ITEMS = [
         cost: 3,
         stock: 5,
         consumable: true,
-        craftonly: false,
+        
     },
     {
         id: 2,
@@ -22,7 +22,7 @@ export const ITEMS = [
         cost: 10,
         stock: 2,
         consumable: true,
-        craftonly: false,
+        
     },
     {
         id: 3,
@@ -32,10 +32,10 @@ export const ITEMS = [
         modName: "▲ reward chance",
         msg: "You rolled the dice...",
         desc: "Gamble (+70% reward chance)",
-        cost: 15,
+        cost: 25,
         stock: 4,
         consumable: true,
-        craftonly: false,
+        
     },
     {
         id: 4,
@@ -43,35 +43,35 @@ export const ITEMS = [
         img: "assets/jovial.png",
         content: "slow-60_multSet-1",
         msg: "You played the joker card.",
-        desc: "Balatro...? (+60s time, reset mult)",
+        desc: "Balatro...? (+60s, reset mult)",
         cost: 30,
         stock: 2,
         consumable: true,
-        craftonly: false,
+        
     },
     {
         id: 5,
         name: "celsius",
         img: "assets/jovial.png",
-        content: "slow-5_addStartTime-5",
+        content: "slow-5_addStartTime-2",
         msg: "You drank the celsius, you feel energized..",
-        desc: "Unhealthy energy drink (+5s, +5s start)",
+        desc: "Unhealthy energy drink (+5s, +2s start)",
         cost: 40,
         stock: 5,
         consumable: true,
-        craftonly: false,
+        
     },
     {
         id: 6,
         name: "super root beer",
         img: "assets/jovial.png",
-        content: "slow-30_multAdd-1",
+        content: "slow-30_multAdd-0.25",
         msg: "glup glup glup SUPER",
-        desc: "Even better mug (+30s time, +1 mult)",
+        desc: "Even better mug (+30s time, +0.25 mult)",
         cost: 80,
         stock: 4,
         consumable: true,
-        craftonly: false,
+        
     },
     {
         id: 7,
@@ -83,19 +83,19 @@ export const ITEMS = [
         cost: 100,
         stock: 1,
         consumable: true,
-        craftonly: false,
+        
     },
     {
         id: 8,
         name: "super duper root beer",
         img: "assets/jovial.png",
         content: "addStartTime-60_multAdd-3_livesSet-99",
-        msg: "glup super super super",
+        msg: "glup super",
         desc: "Super root beer (???)",
-        cost: 9999,
+        cost: 999,
         stock: 1,
         consumable: true,
-        craftonly: false,
+        
     },
     {
         id: 9,
@@ -107,7 +107,7 @@ export const ITEMS = [
         cost: 30,
         stock: 1,
         consumable: true,
-        craftonly: false,
+        
     },
     {
         id: 10,
@@ -116,10 +116,10 @@ export const ITEMS = [
         content: "addStartTime-10",
         msg: "yum yum C:",
         desc: "delicious potato pancakes (+10s start)",
-        cost: 40,
+        cost: 100,
         stock: 3,
         consumable: true,
-        craftonly: false,
+        
     },
     {
         id: 11,
@@ -129,10 +129,10 @@ export const ITEMS = [
         modName: "▲ reward chance",
         msg: "buuuurp",
         desc: "furious cocktail of 4 effects (+1s start, +10s, +1 mult, +60% reward chance)",
-        cost: 60,
+        cost: 160,
         stock: 1,
         consumable: true,
-        craftonly: false,
+        
     },
     {
         id: 12,
@@ -144,7 +144,7 @@ export const ITEMS = [
         cost: 20,
         stock: 3,
         consumable: true,
-        craftonly: false,
+        
     },
     {
         id: 13,
@@ -156,7 +156,7 @@ export const ITEMS = [
         cost: 25,
         stock: 1,
         consumable: true,
-        craftonly: false,
+        
     },
     {
         id: 14,
@@ -168,31 +168,19 @@ export const ITEMS = [
         cost: 50,
         stock: 2,
         consumable: true,
-        craftonly: false,
-    },
-    {
-        id: 15,
-        name: "sandwich",
-        img: "assets/jovial.png",
-        content: "livesSet-2",
-        msg: "yummers",
-        desc: "filling tuna sandwich (+2 lives)",
-        cost: 115,
-        stock: 1,
-        consumable: true,
-        craftonly: false,
+        
     },
     {
         id: 16,
         name: "golden apple",
         img: "assets/jovial.png",
-        content: "maxLivesSet-1",
+        content: "livesSet-3",
         msg: "nom nom nom :D",
-        desc: "enchanted apple that grants more health (+1 max lives)",
-        cost: 130,
+        desc: "enchanted apple that grants health (+3 lives)",
+        cost: 140,
         stock: 1,
         consumable: true,
-        craftonly: false,
+        
     },
     {
         id: 17,
@@ -204,7 +192,7 @@ export const ITEMS = [
         cost: 240,
         stock: 1,
         consumable: true,
-        craftonly: false,
+        
     },
     {
         id: 18,
@@ -216,7 +204,7 @@ export const ITEMS = [
         cost: 80,
         stock: 1,
         consumable: true,
-        craftonly: false,
+        
     },
     {
         id: 19,
@@ -228,11 +216,19 @@ export const ITEMS = [
         cost: 30,
         stock: 1,
         consumable: false,
-        craftonly: false,
+        
     },
     // 20
     {
         id: 21,
-        name: "deat "
+        name: "bread",
+        img: "assets/jovial.png",
+        content: "slow-3",
+        msg: "fresh!",
+        desc: "Delicious. Can be used for sandwiches.",
+        cost: 15,
+        stock: 2,
+        consumable: true,
     }
+    //22
 ];

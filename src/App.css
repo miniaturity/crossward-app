@@ -641,7 +641,10 @@ body {
  margin-left: 0;
 }
 
-
+.craft-list-item-recipe {
+  color: #facc15;
+  font-size: 0.7rem;
+}
 
 .shop-container {
   width: 100%;
