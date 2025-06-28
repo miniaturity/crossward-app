@@ -7,7 +7,9 @@ export const ITEMS = [
         msg: "glup glup glup",
         desc: "Mug. (+5s)",
         cost: 3,
-        stock: 5
+        stock: 5,
+        consumable: true,
+        craftonly: false,
     },
     {
         id: 2,
@@ -19,6 +21,8 @@ export const ITEMS = [
         desc: "Good investment. (+$15 reward)",
         cost: 10,
         stock: 2,
+        consumable: true,
+        craftonly: false,
     },
     {
         id: 3,
@@ -29,7 +33,9 @@ export const ITEMS = [
         msg: "You rolled the dice...",
         desc: "Gamble (+70% reward chance)",
         cost: 15,
-        stock: 4
+        stock: 4,
+        consumable: true,
+        craftonly: false,
     },
     {
         id: 4,
@@ -39,7 +45,9 @@ export const ITEMS = [
         msg: "You played the joker card.",
         desc: "Balatro...? (+60s time, reset mult)",
         cost: 30,
-        stock: 2
+        stock: 2,
+        consumable: true,
+        craftonly: false,
     },
     {
         id: 5,
@@ -49,7 +57,9 @@ export const ITEMS = [
         msg: "You drank the celsius, you feel energized..",
         desc: "Unhealthy energy drink (+5s, +5s start)",
         cost: 40,
-        stock: 5
+        stock: 5,
+        consumable: true,
+        craftonly: false,
     },
     {
         id: 6,
@@ -59,7 +69,9 @@ export const ITEMS = [
         msg: "glup glup glup SUPER",
         desc: "Even better mug (+30s time, +1 mult)",
         cost: 80,
-        stock: 4
+        stock: 4,
+        consumable: true,
+        craftonly: false,
     },
     {
         id: 7,
@@ -69,7 +81,9 @@ export const ITEMS = [
         msg: "You read the dictionary.",
         desc: "Search up every word (Clear board)",
         cost: 100,
-        stock: 1
+        stock: 1,
+        consumable: true,
+        craftonly: false,
     },
     {
         id: 8,
@@ -79,7 +93,9 @@ export const ITEMS = [
         msg: "glup super super super",
         desc: "Super root beer (???)",
         cost: 9999,
-        stock: 1
+        stock: 1,
+        consumable: true,
+        craftonly: false,
     },
     {
         id: 9,
@@ -89,7 +105,9 @@ export const ITEMS = [
         msg: null,
         desc: "he may help you.. (select a word)",
         cost: 30,
-        stock: 1
+        stock: 1,
+        consumable: true,
+        craftonly: false,
     },
     {
         id: 10,
@@ -99,7 +117,9 @@ export const ITEMS = [
         msg: "yum yum C:",
         desc: "delicious potato pancakes (+10s start)",
         cost: 40,
-        stock: 3
+        stock: 3,
+        consumable: true,
+        craftonly: false,
     },
     {
         id: 11,
@@ -111,6 +131,8 @@ export const ITEMS = [
         desc: "furious cocktail of 4 effects (+1s start, +10s, +1 mult, +60% reward chance)",
         cost: 60,
         stock: 1,
+        consumable: true,
+        craftonly: false,
     },
     {
         id: 12,
@@ -120,7 +142,9 @@ export const ITEMS = [
         msg: "boom",
         desc: "explosion of letters",
         cost: 20,
-        stock: 3
+        stock: 3,
+        consumable: true,
+        craftonly: false,
     },
     {
         id: 13,
@@ -130,7 +154,9 @@ export const ITEMS = [
         msg: "",
         desc: "cold.. (+1 Streak Freeze)",
         cost: 25,
-        stock: 1
+        stock: 1,
+        consumable: true,
+        craftonly: false,
     },
     {
         id: 14,
@@ -140,7 +166,9 @@ export const ITEMS = [
         msg: "You feel sticky",
         desc: "yummy peanut butter (+1 life)",
         cost: 50,
-        stock: 2
+        stock: 2,
+        consumable: true,
+        craftonly: false,
     },
     {
         id: 15,
@@ -150,7 +178,9 @@ export const ITEMS = [
         msg: "yummers",
         desc: "filling tuna sandwich (+2 lives)",
         cost: 115,
-        stock: 1
+        stock: 1,
+        consumable: true,
+        craftonly: false,
     },
     {
         id: 16,
@@ -160,7 +190,9 @@ export const ITEMS = [
         msg: "nom nom nom :D",
         desc: "enchanted apple that grants more health (+1 max lives)",
         cost: 130,
-        stock: 1
+        stock: 1,
+        consumable: true,
+        craftonly: false,
     },
     {
         id: 17,
@@ -171,6 +203,8 @@ export const ITEMS = [
         desc: "legendary apple with regenerative abilities. (+1 max, +3 lives)",
         cost: 240,
         stock: 1,
+        consumable: true,
+        craftonly: false,
     },
     {
         id: 18,
@@ -181,5 +215,24 @@ export const ITEMS = [
         desc: "Double jeopardy. (+1 dmg, +1 mult)",
         cost: 80,
         stock: 1,
+        consumable: true,
+        craftonly: false,
+    },
+    {
+        id: 19,
+        name: "potion bottle",
+        img: "assets/jovial.png",
+        content: "na",
+        msg: null,
+        desc: "Ingridient for Crafting.",
+        cost: 30,
+        stock: 1,
+        consumable: false,
+        craftonly: false,
+    },
+    // 20
+    {
+        id: 21,
+        name: "deat "
     }
-]
+];

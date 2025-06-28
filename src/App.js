@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, memo, Fragment, useMemo } from 'react';
 import { useSpring, animated, easings } from '@react-spring/web';
 import useWordDB from './WordDB';
 import { ITEMS } from './items';
+import { CRAFTS, CRAFTABLEITEMS } from './crafts';
 import { Achievements } from './Ach';
 import { Settings } from './Settings';
 
@@ -11,7 +12,9 @@ import { Settings } from './Settings';
   make achievements look better
   moar animations
   sound?
-
+  more items for sure
+  more achievements
+  more everuthiog
   */
 
 
@@ -969,9 +972,10 @@ function ChooseStatus({ reward, streak, pointsGiven, livesLost }) {
 
   let pool = [];
   let override = null;
+  let chosenPool = livesLost ? "hurt" : "good"
 
   for (const s of statuses) {
-    if (s.pool === "good") {
+    if (chosenPool === "good") {
       if (s.req === true) {
         override = s;
         break;
@@ -979,7 +983,7 @@ function ChooseStatus({ reward, streak, pointsGiven, livesLost }) {
         pool.push(s);
         continue;
       }
-    } else if (s.pool === "hurt") {
+    } else if (chosenPool === "hurt") {
       if (s.req === true) {
         override = s;
         break;
@@ -994,7 +998,7 @@ function ChooseStatus({ reward, streak, pointsGiven, livesLost }) {
   const choice = getRandomIntInclusive(0, pool.length - 1);
   let chosen = override === null ? pool[choice] : override
   let pos = `${reward ? ` +${reward} zł /` : ''}${` +${pointsGiven} pts`}`;
-  let neg = ` -${livesLost} live${livesLost > 1 ? `s` : ``}`;
+  let neg = ` -${livesLost} li${livesLost > 1 ? `v` : `f`}e${livesLost > 1 ? `s` : ``}`;
   chosen.text = `${chosen.text} /${livesLost ? neg : pos}`;
   
   return chosen;
@@ -1362,6 +1366,88 @@ const MidSection = ({
   );
 };
 
+function CraftMenu({ currentPage, setCurrentPage, inventory, setInventory }) {
+  const [selectedCraft, setSelectedCraft] = useState(null);
+  const [canCraft, setCanCraft] = useState(false);
+
+  const isCraftable = (recipe) => {
+    const parsedRecipe = recipe.recipe.split('_');
+    let items = [];
+    parsedRecipe.foreach((i) => {
+      items.push(ITEMS.find(item => item.name === i));
+    });
+
+    const rCount = {};
+    items.forEach((item) => {
+      rCount[item.name] = (rCount[item.name] || 0) + 1; 
+    })
+
+    const iCount = {};
+    inventory.forEach((item) => {
+      iCount[item.name] = (iCount[item.name] || 0) + 1;
+    });
+
+    for (const item in rCount) {
+      if ((iCount[item] || 0) < rCount[item]) {
+        return false;
+      }
+    };
+    return true;
+  }
+
+  const craft = (recipe) => {
+    if (!canCraft) return;
+
+    const parsedRecipe = recipe.recipe.split('_');
+    let items = [];
+    parsedRecipe.forEach((i) => {
+      items.push(ITEMS.find(item => item.name === i));
+    });
+
+    let rCount = {};
+    items.forEach((item) => {
+      rCount[item.name] = (rCount[item.name] || 0) + 1; 
+    });
+
+    for (const itemName in rCount) {
+      const availableCount = inventory.filter(i => i.name === itemName).length;
+      if (availableCount < rCount[itemName]) {
+        console.log(`Not enough ${itemName} to craft (THIS SHOULDNT HAPPEN)`);
+        return; 
+      }
+    }
+
+    for (const itemName in rCount) {
+      let removeCount = rCount[itemName];
+      setInventory(prev => {
+        const newInventory = [...prev];
+        for (let i = newInventory.length - 1; i >= 0 && removeCount > 0; i--) {
+          if (newInventory[i].name === itemName) {
+            newInventory.splice(i, 1);
+            removeCount--;
+          }
+        }
+        return newInventory;
+      });
+    }
+
+    setInventory(prev => [...prev, CRAFTABLEITEMS.find(i => i.name === recipe.name)])
+  }
+
+  useEffect(() => {
+    setCanCraft(isCraftable(selectedCraft));
+  }, [selectedCraft]);
+  
+  return (
+    <>
+      <div className="shop-container">
+
+      </div>
+    </>
+  );
+  
+}
+
 
 function LeftMenu({ onNewGame, inGame, pause, paused, setCurrentPage, handleChangePuzzle }) {
   const [visibleButtons, setVisibleButtons] = useState(0);
@@ -1701,7 +1787,7 @@ const ModifierItem = memo(({ mod }) => {
 function RightMenu({ inventory, setInventory, setters, modifiers, setModifiers, boardReff, modifiersRef }) {
 
   const consumeItem = (item) => {
-    if (modifiersRef.current.some(m => m.name === item.modName) && !item.combine) return;
+    if ((modifiersRef.current.some(m => m.name === item.modName) && !item.combine) || !item.consumable) return;
     if (item.msg) {
       const itMsg = item.msg;
       setters.setDialogue(itMsg);
@@ -1811,6 +1897,7 @@ const BuyItem = ({ item, inv, bal, setBalance, setInv, id, setCurrentPage }) => 
   );
 };
 
+
 function mapToUniqueRandomInt(arr, min, max) {
   if (max - min + 1 < arr.length) {
     throw new Error("Range is too small to generate unique random numbers for all elements.");
@@ -1828,7 +1915,7 @@ function mapToUniqueRandomInt(arr, min, max) {
   return result;
 }
 
-const Shop = ({ 
+function Shop({ 
   inventory, 
   balance, 
   setBalance, 
@@ -1844,7 +1931,7 @@ const Shop = ({
   setCurrentPage,
   currentPage,
   number
-}) => {
+}) {
   const [selectedItem, setSelectedItem] = useState(null);
   
   const shopItems = [...ITEMS];
@@ -1854,7 +1941,7 @@ const Shop = ({
   };
   
   const resetShopCycle = () => {
-    const newCycle = [...mapToUniqueRandomInt(shopCycle, 1, shopItems.length)];
+    let newCycle = [...mapToUniqueRandomInt(shopCycle, 1, shopItems.length)];
     
     setShopCycle(newCycle);
     
